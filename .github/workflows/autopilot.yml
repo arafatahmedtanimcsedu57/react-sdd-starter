@@ -1,0 +1,22 @@
+name: Autopilot
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  build-next-spec:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Pick the highest-priority change folder in openspec/changes/.
+            Implement it on a new branch following tasks.md and CLAUDE.md.
+            Run: npm run typecheck && npm run lint && npm run test && npm run doctor.
+            Fix anything that fails, then open a PR. Do NOT merge.
