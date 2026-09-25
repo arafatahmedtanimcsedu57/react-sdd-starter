@@ -2,7 +2,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, master]
 
 jobs:
   quality:
@@ -22,4 +22,6 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - name: React health gate
-        run: npx -y react-doctor@latest . --diff main --score
+        env:
+          BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
+        run: npx -y react-doctor@latest . --diff "origin/$BASE_REF" --score
