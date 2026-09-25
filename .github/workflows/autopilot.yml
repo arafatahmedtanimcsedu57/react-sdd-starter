@@ -10,13 +10,30 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            Pick the highest-priority change folder in openspec/changes/.
-            Implement it on a new branch following tasks.md and CLAUDE.md.
-            Run: npm run typecheck && npm run lint && npm run test && npm run doctor.
-            Fix anything that fails, then open a PR. Do NOT merge.
+            Implement exactly ONE change per run. Never batch several changes into one PR.
+
+            1. List the change folders in openspec/changes/. Skip any that already have an
+               open PR (check with `gh pr list`). Pick the highest-priority remaining one;
+               if a change says it depends on another, skip it until that one is merged.
+               If none are left, stop.
+            2. Estimate the size from tasks.md. The PR size limit is 400 reviewable lines
+               (tests, mocks, specs, lockfiles and generated code don't count). If the
+               change will clearly exceed it, do NOT implement it. Open an issue titled
+               "Split needed: <change-name>" proposing how to split it into smaller changes,
+               then stop.
+            3. Implement it on a new branch following tasks.md and CLAUDE.md.
+            4. Run: npm run typecheck && npm run lint && npm run test && npm run doctor.
+               Fix anything that fails.
+            5. Check the size with `git diff --numstat origin/HEAD...HEAD`. If it's over the
+               limit, don't open the PR; open the "Split needed" issue instead and stop.
+            6. Open a PR that fills in every section of .github/pull_request_template.md,
+               especially "Review carefully" and "Safe to skim". Do NOT merge.

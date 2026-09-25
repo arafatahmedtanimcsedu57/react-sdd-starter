@@ -66,8 +66,18 @@ on your own.
 - Run OpenSpec's **propose** command (the slash command registered by `openspec init`).
   It produces `proposal.md`, delta specs, `design.md`, and `tasks.md` under
   `openspec/changes/`.
+- **Size the change before Gate 1.** One OpenSpec change = one PR, and CI fails any PR over
+  **400 reviewable lines** (tests, mocks, specs, lockfiles and generated code don't count —
+  see `.github/workflows/pr-size.yml`). Estimate the size from `tasks.md`. If it will
+  clearly exceed the limit, split it into several smaller OpenSpec changes, each
+  independently shippable and ordered by dependency — typically:
+  1. contract: Zod schema + RTK Query endpoints + MSW handlers
+  2. UI: components + component tests
+  3. wiring: route/page + e2e
+     Note each change's dependencies in its `proposal.md` ("depends on: <change-name>").
 - **STOP. Present `tasks.md` to the human and wait for approval.** Confirm: scope is right,
-  task order is sane, the design references the mockup and tokens.
+  task order is sane, the design references the mockup and tokens, and — if you split the
+  work — the split and its order.
 
 ### 4. Implement loop (self-correcting)
 
@@ -94,7 +104,13 @@ If any step fails, fix it and re-run. This is the self-correct loop — do not s
 
 ### 6. Ship + GATE 2
 
-- Open a pull request. CI will re-run the full gate; Vercel will post a preview URL.
+- Check the size first: `git diff --numstat origin/HEAD...HEAD` (origin/HEAD is the default branch). If it's over the limit, stop and
+  split the remaining work into a new OpenSpec change rather than growing this PR.
+- Open a pull request that fills in **every section** of
+  `.github/pull_request_template.md`. The "Review carefully" and "Safe to skim" sections
+  are the point: tell the reviewer exactly which lines carry risk and why, so they don't
+  have to read everything with equal attention.
+- CI will re-run the full gate plus the PR size check; Vercel will post a preview URL.
 - **STOP. Do not merge.** Present the PR and preview to the human for review.
 - After the human merges, run OpenSpec's **archive** command to fold the change into the
   living specs under `openspec/specs/`.
@@ -122,6 +138,9 @@ Three layers, all via Vitest / React Testing Library / Playwright:
 ## Guardrails
 
 - Never skip either human gate.
+- Keep PRs reviewable: one OpenSpec change per PR, at most 400 reviewable lines. Split the
+  work instead of asking for the `large-pr-approved` label; that label is for the human to
+  add for rare cases like a mechanical rename.
 - Keep conventions in `CLAUDE.md` authoritative (named exports, one component per file,
   colocated tests, the styling approach + UI library recorded in `architecture.md`, data
   fetching in `use*` hooks). State & data rules: **RTK Query** for server state/data fetching

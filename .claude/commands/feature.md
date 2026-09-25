@@ -25,13 +25,15 @@ Argument: `$ARGUMENTS` is the feature/change description. If empty, ask what to 
    where things live. If the change touches an API, **establish the contract first** (see
    `CLAUDE.md` → API contracts): generate/hand-write from a spec, capture an informal contract
    as Zod schemas, or — if the API isn't built yet — write the contract and mock it with MSW.
-2. **Spec + GATE 1** — run OpenSpec **propose**, then present `tasks.md` and STOP for
-   approval.
+2. **Spec + GATE 1** — run OpenSpec **propose**. If the change will exceed 400 reviewable
+   lines, split it into smaller changes (one per PR; see the skill). Present `tasks.md` (and
+   the split, if any) and STOP for approval.
 3. **Implement** — `/clear`, run OpenSpec **apply**, implement task-by-task with tests.
    Hooks + react-doctor self-correct on each edit. Run `react-reviewer` after a chunk.
 4. **Verify** — must pass before done:
    `npm run typecheck && npm run lint && npm run test && npm run doctor`
-5. **Ship + GATE 2** — open a PR (never merge). Report CI status + Vercel preview URL, then
+5. **Ship + GATE 2** — open a PR (never merge) using `.github/pull_request_template.md`,
+   with the "Review carefully" / "Safe to skim" sections filled in. Report CI status + Vercel preview URL, then
    STOP for review. After merge, offer to run OpenSpec **archive**.
 
 ## Reminder

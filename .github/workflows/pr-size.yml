@@ -1,0 +1,51 @@
+name: PR size
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# Big PRs can't be reviewed properly. Fail any PR over MAX_LINES reviewable lines so the
+# work gets split into smaller OpenSpec changes. Tests, mocks, specs, lockfiles and
+# generated code don't count; they're skimmed at Gate 2, not read line by line.
+# Escape hatch: add the `large-pr-approved` label (e.g. a one-off scaffold or rename).
+
+jobs:
+  size:
+    runs-on: ubuntu-latest
+    env:
+      MAX_LINES: 400
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Count reviewable lines
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'large-pr-approved') }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          stats=$(git diff --numstat "origin/$BASE_REF...HEAD" -- . \
+            ':(exclude)package-lock.json' \
+            ':(exclude)src/services/generatedApi.ts' \
+            ':(exclude)public/mockServiceWorker.js' \
+            ':(exclude)src/mocks/**' \
+            ':(exclude)openspec/**' \
+            ':(exclude)e2e/**' \
+            ':(exclude)**/*.test.ts' \
+            ':(exclude)**/*.test.tsx')
+
+          # numstat prints "-" for binary files; count those as 0 lines.
+          total=$(echo "$stats" | awk '$1 != "-" { sum += $1 + $2 } END { print sum + 0 }')
+
+          echo "### PR size: $total / $MAX_LINES reviewable lines" >> "$GITHUB_STEP_SUMMARY"
+          echo "Largest files:" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "$stats" | awk '$1 != "-" { print $1 + $2, $3 }' | sort -rn | head -10 >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$total" -gt "$MAX_LINES" ]; then
+            echo "::error::This PR changes $total reviewable lines (limit $MAX_LINES). Split it into smaller OpenSpec changes, or add the 'large-pr-approved' label if it truly can't be split."
+            exit 1
+          fi
+          echo "PR size OK: $total / $MAX_LINES reviewable lines."
+      - name: Size check skipped
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'large-pr-approved') }}
+        run: echo "::warning::PR size limit bypassed by the 'large-pr-approved' label."

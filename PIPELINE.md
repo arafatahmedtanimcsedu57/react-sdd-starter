@@ -9,7 +9,7 @@ folder and `CLAUDE.md` into any React repo to use it.
 
 Automation does not remove the human gate — it **relocates it to the pull request**.
 Everything upstream of the PR can be automated aggressively, because nothing reaches `main`
-(or production) until CI is green *and* a human approves the PR.
+(or production) until CI is green _and_ a human approves the PR.
 
 ---
 
@@ -97,7 +97,7 @@ the repo to Vercel (preview deploy per PR; production from `main`).
    if messy); an informal contract → capture it as Zod schemas; frontend-first with no API yet
    → write the contract first and mock it with MSW so the UI never blocks on the backend.
 
-Keep `features.md` / `architecture.md` as the *human inputs to OpenSpec* — don't hand-maintain
+Keep `features.md` / `architecture.md` as the _human inputs to OpenSpec_ — don't hand-maintain
 a parallel spec.
 
 ## Phase 2 — Design (agent runs)
@@ -108,7 +108,9 @@ tokens in `architecture.md`. This is the visual target — the agent is blind to
 ## Phase 3 — Spec + Gate 1 (agent runs → you review)
 
 1. Run OpenSpec **propose** → `proposal.md`, delta specs, `design.md`, `tasks.md`.
-2. **★ GATE 1 — review `tasks.md` before implementing.** Cheapest place to fix intent.
+2. **★ GATE 1 — review `tasks.md` before implementing.** Cheapest place to fix intent — and
+   the place to control PR size. One change = one PR, max 400 reviewable lines; anything
+   bigger gets split into several changes here (e.g. contract → UI → wiring).
 
 ## Phase 4 — Implement loop (agent runs, self-correcting)
 
@@ -126,7 +128,10 @@ npm run typecheck && npm run lint && npm run test && npm run doctor
 ## Phase 5 — Verify + Ship + Gate 2
 
 1. Agent opens a PR (manually, via `@claude`, or via autopilot).
-2. **CI gate** runs: typecheck, lint, unit + component tests, e2e, `react-doctor --diff main`.
+2. **CI gate** runs: typecheck, lint, unit + component tests, e2e, `react-doctor --diff <base branch>`,
+   plus the **PR size check** (`pr-size.yml`, 400 reviewable lines; the `large-pr-approved`
+   label bypasses it). The PR body follows `.github/pull_request_template.md` so the reviewer
+   knows what to read closely and what to skim.
 3. Vercel posts a **preview URL** — eyeball it (closes the visual gap).
 4. **★ GATE 2 — review the PR + preview**, then merge.
 5. Run OpenSpec **archive** to fold the change into living specs.
@@ -139,6 +144,7 @@ npm run typecheck && npm run lint && npm run test && npm run doctor
 anything autonomous writes code. Nothing merges red.
 
 **Execution (autonomous agent)** — `anthropics/claude-code-action@v1` turns work into PRs:
+
 - **On-demand:** mention `@claude` on an issue → it branches, implements, tests, opens a PR.
 - **Scheduled:** a cron job picks the next `openspec/changes/` folder and opens a PR unattended.
   It reads `CLAUDE.md` every run, so conventions apply automatically.
@@ -152,9 +158,11 @@ Every autonomous PR still lands at Gate 2.
 ## Configuration reference
 
 ### CLAUDE.md
+
 Ships in this bundle. Holds the commands, component conventions, the fixed folder structure,
 and the standing rules (RTK Query for server state, Zustand for client state, React Hook Form
-+ Zod for forms). Fill in the project name and set the styling/UI line at bootstrap.
+
+- Zod for forms). Fill in the project name and set the styling/UI line at bootstrap.
 
 ### .claude/settings.json
 
@@ -165,7 +173,10 @@ and the standing rules (RTK Query for server state, Zustand for client state, Re
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "npx prettier --write $CLAUDE_FILE_PATHS" },
+          {
+            "type": "command",
+            "command": "npx prettier --write $CLAUDE_FILE_PATHS"
+          },
           { "type": "command", "command": "npm run typecheck" }
         ]
       }
@@ -201,7 +212,11 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  test: { environment: 'jsdom', globals: true, setupFiles: './src/test/setup.ts' },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.ts',
+  },
 })
 ```
 
@@ -210,10 +225,13 @@ export default defineConfig({
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll } from 'vitest'
-import { server } from '../mocks/server'   // MSW — default mock layer
+import { server } from '../mocks/server' // MSW — default mock layer
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
-afterEach(() => { server.resetHandlers(); cleanup() })
+afterEach(() => {
+  server.resetHandlers()
+  cleanup()
+})
 afterAll(() => server.close())
 ```
 
@@ -246,7 +264,8 @@ import { ExampleForm } from './ExampleForm'
 
 describe('ExampleForm', () => {
   it('submits a valid value', async () => {
-    const user = userEvent.setup(); const onSubmit = vi.fn()
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
     render(<ExampleForm onSubmit={onSubmit} />)
     await user.type(screen.getByLabelText(/name/i), 'Ada')
     await user.click(screen.getByRole('button', { name: /save/i }))
@@ -254,7 +273,8 @@ describe('ExampleForm', () => {
   })
 
   it('shows an error on empty input', async () => {
-    const user = userEvent.setup(); const onSubmit = vi.fn()
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
     render(<ExampleForm onSubmit={onSubmit} />)
     await user.click(screen.getByRole('button', { name: /save/i }))
     expect(onSubmit).not.toHaveBeenCalled()
@@ -300,7 +320,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, master]
 
 jobs:
   quality:
@@ -308,7 +328,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0            # react-doctor --diff needs base branch history
+          fetch-depth: 0 # react-doctor --diff needs base branch history
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -320,7 +340,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - name: React health gate
-        run: npx -y react-doctor@latest . --diff main --score
+        env:
+          BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
+        run: npx -y react-doctor@latest . --diff "origin/$BASE_REF" --score
 ```
 
 ### .github/workflows/claude.yml — on-demand executor
@@ -357,12 +379,12 @@ jobs:
 name: Autopilot
 on:
   schedule:
-    - cron: '0 2 * * *'    # nightly
+    - cron: '0 2 * * *' # nightly
   workflow_dispatch:
 
 jobs:
   build-next-spec:
-    runs-on: ubuntu-latest   # or a self-hosted runner
+    runs-on: ubuntu-latest # or a self-hosted runner
     permissions:
       contents: write
       pull-requests: write

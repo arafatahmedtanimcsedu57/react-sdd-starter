@@ -4,15 +4,17 @@ Authoritative rules for this repo. Claude reads this every session — follow it
 (Project name, and the styling approach + UI library, are set during bootstrap.)
 
 ## Commands
-- Dev:       npm run dev
-- Build:     npm run build
+
+- Dev: npm run dev
+- Build: npm run build
 - Typecheck: npm run typecheck
-- Lint:      npm run lint
-- Test:      npm run test
-- E2E:       npm run test:e2e
-- Doctor:    npm run doctor
+- Lint: npm run lint
+- Test: npm run test
+- E2E: npm run test:e2e
+- Doctor: npm run doctor
 
 ## Component conventions
+
 - Function components only; named exports (no default exports)
 - One component per file; colocate `<Component>.test.tsx`
 - Props typed with an explicit `<Component>Props` interface
@@ -53,6 +55,7 @@ e2e/                      # Playwright specs
 ```
 
 Placement rules:
+
 - Pure function → `src/lib/`. Shared hook → `src/hooks/`. Shared type → `src/types/`.
 - Anything specific to one domain → `src/features/<domain>/` (its components, endpoints,
   Zustand store, Zod schema, and types live together).
@@ -67,13 +70,14 @@ Placement rules:
 
 Three libraries, three jobs — do not mix them up:
 
-| Concern | Library | Never use instead |
-|---|---|---|
-| Server state / data fetching | **RTK Query** | raw `fetch`/`axios` in components |
-| Client / UI state | **Zustand** | Redux slices for UI state |
-| Forms + validation | **React Hook Form + Zod** | uncontrolled ad-hoc validation |
+| Concern                      | Library                   | Never use instead                 |
+| ---------------------------- | ------------------------- | --------------------------------- |
+| Server state / data fetching | **RTK Query**             | raw `fetch`/`axios` in components |
+| Client / UI state            | **Zustand**               | Redux slices for UI state         |
+| Forms + validation           | **React Hook Form + Zod** | uncontrolled ad-hoc validation    |
 
 ### Server state + data fetching — RTK Query
+
 - All server data goes through RTK Query (from `@reduxjs/toolkit`). No raw `fetch`/`axios`
   in components or hooks.
 - Define endpoints in an api slice; use `tagTypes` for cache invalidation; components
@@ -116,6 +120,7 @@ export const store = configureStore({
 ```
 
 ### Client / UI state — Zustand
+
 - Local and cross-component client state (UI toggles, filters, wizard steps, selected rows)
   lives in Zustand stores — not Redux.
 - One store per concern; keep stores small; **select narrowly** to avoid re-renders.
@@ -138,6 +143,7 @@ export const useUiStore = create<UiState>((set) => ({
 ```
 
 ### Forms + validation — React Hook Form + Zod
+
 - Every form uses `react-hook-form` with a Zod schema via `@hookform/resolvers/zod`.
 - The Zod schema is the single source of truth; infer the TS type from it with `z.infer`.
 - Reuse Zod schemas to validate RTK Query request/response payloads where it adds safety.
@@ -154,11 +160,16 @@ const schema = z.object({
 })
 export type ExampleValues = z.infer<typeof schema>
 
-export interface ExampleFormProps { onSubmit: (v: ExampleValues) => void }
+export interface ExampleFormProps {
+  onSubmit: (v: ExampleValues) => void
+}
 
 export function ExampleForm({ onSubmit }: ExampleFormProps) {
-  const { register, handleSubmit, formState: { errors } } =
-    useForm<ExampleValues>({ resolver: zodResolver(schema) })
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ExampleValues>({ resolver: zodResolver(schema) })
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -197,11 +208,13 @@ Three cases — pick based on what exists:
    honored the contract, nothing else changes.
 
 ### Mocking — MSW (default everywhere)
+
 - MSW is the default mock layer for dev (frontend-first) **and** for component + e2e tests.
 - Handlers live in `src/mocks/`, derived from the contract (Zod schemas or OpenAPI).
 - Keep mock fixtures valid against the Zod schemas so the mock can't drift from the contract.
 
 ### Runtime guard
+
 - Validate RTK Query responses with the Zod schema via `transformResponse`, so a backend that
   drifts from the agreed shape fails loudly instead of silently.
 
@@ -215,7 +228,7 @@ export const emptyApi = createApi({
 // openapi-config.ts
 import type { ConfigFile } from '@rtk-query/codegen-openapi'
 const config: ConfigFile = {
-  schemaFile: './openapi.json',        // or a URL to the live Swagger
+  schemaFile: './openapi.json', // or a URL to the live Swagger
   apiFile: './src/services/emptyApi.ts',
   apiImport: 'emptyApi',
   outputFile: './src/services/generatedApi.ts',
@@ -236,15 +249,14 @@ getItems: build.query<Item[], void>({
 // mocks from the contract:  src/mocks/handlers.ts
 import { http, HttpResponse } from 'msw'
 import { itemSchema } from '../features/items/schema'
-const items = [itemSchema.parse({ id: '1', name: 'Example' })]  // fixture must satisfy the schema
-export const handlers = [
-  http.get('/api/items', () => HttpResponse.json(items)),
-]
+const items = [itemSchema.parse({ id: '1', name: 'Example' })] // fixture must satisfy the schema
+export const handlers = [http.get('/api/items', () => HttpResponse.json(items))]
 // src/mocks/browser.ts  → setupWorker(...handlers)   (dev / frontend-first)
 // src/mocks/server.ts   → setupServer(...handlers)   (tests)
 ```
 
 ## Testing (details in the feature-pipeline skill)
+
 - Unit for pure logic; component tests via Testing Library (query by label/role);
   Playwright for the key flow.
 - **MSW is the default mock layer** for component + e2e tests. The node server is started in
@@ -252,7 +264,17 @@ export const handlers = [
   mocking enabled or hit a real backend when one exists.
 - Test Zustand stores as plain functions; test Zod schemas directly for edge cases.
 
+## Pull requests (fixed rules)
+
+- One OpenSpec change = one PR. Max **400 reviewable lines** per PR — enforced by
+  `.github/workflows/pr-size.yml` (tests, mocks, `openspec/`, lockfiles and generated code
+  are excluded). Over the limit → split into smaller changes; don't grow the PR.
+- Every PR fills in `.github/pull_request_template.md`, including "Review carefully" (risky
+  lines + why) and "Safe to skim".
+- The `large-pr-approved` label bypasses the size check. Only the human adds it.
+
 ## Definition of done (self-check ALL before stopping)
+
 ```
 npm run typecheck && npm run lint && npm run test && npm run doctor
 ```
