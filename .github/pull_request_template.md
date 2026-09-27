@@ -11,6 +11,14 @@
 **Risk tier:** <!-- low | medium | high — copy from proposal.md; see CLAUDE.md → Human in the loop -->
 **Written by:** <!-- human | agent (local) | agent (autopilot / @claude) -->
 
+## Design
+
+<!-- UI changes only; otherwise "No UI". -->
+
+**Claude Design:** <!-- canvas link → page "<feature>" -->
+**Screenshots:** `openspec/changes/<change-name>/screenshots/`
+**Differences from the design:** <!-- "None", or each one and why -->
+
 ## Review carefully
 
 <!-- The files/lines where a bug would actually hurt: state logic, data flow, Zod schemas,
@@ -46,6 +54,7 @@
 - [ ] PR size check is green, or `large-pr-approved` is justified below
 - [ ] No hardcoded secrets; user input validated with Zod
 - [ ] No new dependency, or it was approved at Gate 1
+- [ ] UI matches the Claude Design artboards (screenshots attached); axe reports no violations
 
 ### Reviewer (human)
 

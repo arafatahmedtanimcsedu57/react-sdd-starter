@@ -28,6 +28,7 @@ jobs:
             ':(exclude)public/mockServiceWorker.js' \
             ':(exclude)src/mocks/**' \
             ':(exclude)openspec/**' \
+            ':(exclude)design/**' \
             ':(exclude).claude/commands/opsx/**' \
             ':(exclude).claude/skills/openspec-*/**' \
             ':(exclude)e2e/**' \

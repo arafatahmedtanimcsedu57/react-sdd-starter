@@ -61,7 +61,10 @@ jobs:
                an issue "Split needed: <change-name>" proposing a split, then stop.
             3. Read the "Open questions" section of proposal.md. If any question is unanswered,
                do NOT guess: open an issue "Question: <change-name>" listing them, then stop.
-            4. Create branch `autopilot/<change-name>` and implement tasks.md, following CLAUDE.md.
+            4. UI changes build from the design copy in design/ (you can't open Claude Design).
+               If the screens listed in the change's design.md aren't in design/, open an issue
+               "Question: <change-name>" saying the design must be snapshotted with /build, then stop.
+               Create branch `autopilot/<change-name>` and implement tasks.md, following CLAUDE.md.
                If you need a new npm dependency, stop and open a "Question" issue instead.
             5. Run `npm run check` and `npm run test:e2e`. Fix failures. If still red after 3
                attempts, open the PR as a DRAFT and explain what is failing and why.

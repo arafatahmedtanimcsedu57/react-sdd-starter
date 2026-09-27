@@ -46,16 +46,21 @@ Human-only setup on GitHub (the agent can't and shouldn't do these):
 
 ## How to use the pipeline
 
-Three commands — that's the whole interface. Claude runs the rest (the `feature-pipeline`
+Five commands — that's the whole interface. Claude runs the rest (the `feature-pipeline`
 and `openspec-*` skills, the reviewer subagents) behind them; those are hidden from the `/`
-menu on purpose.
+menu on purpose. The UI is designed in **Claude Design** on claude.ai, and you can edit it
+there yourself at any point.
 
-| Command             | When                                    | What happens                                               |
-| ------------------- | --------------------------------------- | ---------------------------------------------------------- |
-| `/start`            | once, in a repo made from this template | name the project, pick styling + UI library, set up        |
-| `/feature <idea>`   | every change                            | spec → **Gate 1** (you approve) → build → PR → **Gate 2**  |
-| `/feature <change>` | after a `/clear`, to resume             | picks the change up where it stopped                       |
-| `/finish <change>`  | after you merge the PR                  | archives the spec into `openspec/specs/`, marks it shipped |
+| Command              | When                                    | What happens                                                                                         |
+| -------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `/start`             | once, in a repo made from this template | name, styling + UI library, first requirements, **Design System + a screen per feature**             |
+| `/feature <idea>`    | every new feature or change             | requirements → reuse its design, or design it in your theme → spec. Then you edit the design         |
+| `/build <change>`    | when the design looks right             | re-reads your design edits → **Gate 1** (you say yes) → code → tests + screenshots → PR (**Gate 2**) |
+| `/sync-ui [feature]` | after you edit an already-built design  | diffs design vs code; codes visual changes, sends behaviour changes to `/build`                      |
+| `/finish <change>`   | after you merge the PR                  | archives the spec into `openspec/specs/`, marks it shipped                                           |
+
+`/build` and `/sync-ui` need a local Claude Code session signed in to claude.ai. The
+approved design is also copied into `design/`, which is what CI and autopilot build from.
 
 - **Or just describe it:** asking for a feature in plain words triggers the same pipeline.
 - **Where you come in:** see `PIPELINE.md` → "Human involvement" for what each gate asks

@@ -26,9 +26,19 @@ Replace "starter default" with a name and date when your team confirms or change
 
 When a real backend ships, record its base URL and who owns the contract on that side.
 
+## Design (Claude Design)
+
+| Artifact       | Link                         |
+| -------------- | ---------------------------- |
+| Design System  | _not created yet — `/start`_ |
+| Project canvas | _not created yet — `/start`_ |
+
+Breakpoints designed for: mobile 390, desktop 1280.
+The repo copy of what's built lives in `design/` — see CLAUDE.md → UI design.
+
 ## Design tokens
 
-Tokens flow into the `@theme` block in `src/styles/index.css` (Tailwind 4). Never hand-copy values into
+Tokens come from the Design System above and flow into the `@theme` block in `src/styles/index.css` (Tailwind 4). Never hand-copy values into
 components.
 
 | Token         | Value   | Notes |
