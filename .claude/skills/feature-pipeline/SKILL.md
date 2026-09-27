@@ -1,5 +1,6 @@
 ---
 name: feature-pipeline
+user-invocable: false
 description: >-
   Spec-driven, self-correcting workflow for building or changing a feature in this
   React (Vite + TypeScript) app. Use this skill whenever the user asks to build, add,
@@ -68,7 +69,7 @@ correction. How much attention a change needs depends on its **risk tier** (see
 
 ### 3. Spec + GATE 1
 
-- Run OpenSpec **propose** (`/opsx:propose`, or the `openspec-propose` skill). It produces
+- Run OpenSpec **propose** (the `openspec-propose` skill). It produces
   `proposal.md`, delta specs, `design.md`, and `tasks.md` under `openspec/changes/`, and
   follows the rules in `openspec/config.yaml` (risk tier, open questions, size estimate,
   `approved: <pending>` line).
@@ -100,13 +101,13 @@ correction. How much attention a change needs depends on its **risk tier** (see
 - **Async option** (teams, or when the human isn't in this session): commit the change
   folder on a branch and open a **spec PR** (only `openspec/` files). CODEOWNERS routes it;
   the reviewer adds the `approved:` line in their review. Once merged, the change is eligible
-  for `/opsx:apply` or autopilot.
+  for `/feature <change-name>` or autopilot.
 
 ### 4. Implement loop (self-correcting)
 
 - Fresh context helps: you can't clear it yourself, so if the conversation is long, ask the
-  human to run `/clear` and then `/opsx:apply <change-name>`. If it's short, just continue.
-- Run OpenSpec **apply** (`/opsx:apply <change-name>`). It refuses to start while
+  human to run `/clear` and then `/feature <change-name>`. If it's short, just continue.
+- Run OpenSpec **apply** (the `openspec-apply-change` skill). It refuses to start while
   `tasks.md` still says `approved: <pending>`. Work down the checklist one item at a time.
 - Hooks self-correct as you go: after every edit, prettier + eslint + typecheck run on the
   file; before you end a turn, the tests related to changed files and react-doctor run.
@@ -146,8 +147,8 @@ what you think is wrong. Don't disable a test, a lint rule or a hook to get gree
   tier, the 1–3 places to read carefully, and the "Decisions I made without asking" list.
 - Review comments: address each one, reply on the thread with what you changed, and push.
   If you disagree with a comment, say why once and let the human decide.
-- After the human merges, run `/opsx:archive <change-name>` to fold the change into the
-  living specs under `openspec/specs/`, and mark it shipped in `features.md`.
+- After the human merges, tell them to run `/finish <change-name>`: it folds the change into
+  the living specs under `openspec/specs/` and marks it shipped in `features.md`.
 
 ### 7. Learn (after merge)
 

@@ -21,14 +21,14 @@ DEFINE            plan mode → features.md
 DESIGN            UI design skill → html/css mockup  (visual target)
 SPEC              OpenSpec propose → proposal / spec / tasks.md
    ★ GATE 1       you review tasks.md              (cheapest place to fix intent)
-IMPLEMENT LOOP    (/clear) → /opsx:apply → implement
+IMPLEMENT LOOP    (/clear) → /feature <change> → implement
    ↻ self-correct   after each edit: prettier + eslint + typecheck (errors fed back)
                      at turn end: related tests + react-doctor (errors fed back)
                      npm run check at the done-gate
 VERIFY            CI: typecheck · lint · format · unit · e2e · react-doctor (changed)
 SHIP              Vercel preview deploy per PR
    ★ GATE 2       you review the PR + preview URL
-                  merge → prod deploy → OpenSpec archive → living specs
+                  merge → prod deploy → /finish → living specs
 ```
 
 Ownership: **you drive** DEFINE and both gates; **the agent runs** DESIGN, SPEC, IMPLEMENT;
@@ -50,9 +50,9 @@ The fixed folder structure (authoritative copy lives in `CLAUDE.md`):
 │   └── changes/                  # proposals: proposal.md, design.md, tasks.md
 ├── .claude/
 │   ├── settings.json             # PostToolUse hooks (prettier + typecheck)
-│   ├── skills/feature-pipeline/  # the workflow skill
+│   ├── skills/                   # feature-pipeline + openspec-* (hidden; Claude uses them)
 │   ├── agents/                   # react-reviewer, codebase-explorer
-│   └── commands/                 # /react-project, /feature
+│   └── commands/                 # /start, /feature, /finish — the only user commands
 ├── .github/workflows/            # ci.yml, claude.yml, autopilot.yml
 ├── e2e/                          # Playwright specs
 └── src/
@@ -169,7 +169,7 @@ The files are the documentation — this playbook doesn't copy them (copies drif
 | Turn-end self-correction               | `.claude/hooks/stop-check.sh` (related tests + doctor) |
 | What the agent may not do              | `.claude/settings.json` → `permissions`                |
 | Workflow for the agent                 | `.claude/skills/feature-pipeline/SKILL.md`             |
-| One-shot commands                      | `.claude/commands/` + OpenSpec's `/opsx:*`             |
+| User commands                          | `.claude/commands/` (`/start`, `/feature`, `/finish`)  |
 | Enforcement gate                       | `.github/workflows/ci.yml`, `pr-size.yml`              |
 | Agent executors                        | `.github/workflows/claude.yml`, `autopilot.yml`        |
 | Who reviews what                       | `.github/CODEOWNERS`                                   |
@@ -190,7 +190,7 @@ The gates only work if they fit into a real person's day. The rules that make th
   reviewer. Reviewing a copy change like a schema change burns people out.
 - **Approval is a fact, not a vibe.** `tasks.md` ends with `approved: <pending>`. Only a
   human's explicit "approve" (in chat, or in a spec-PR review) turns it into
-  `approved: <name>, <date>`. `/opsx:apply` and autopilot refuse unapproved changes.
+  `approved: <name>, <date>`. `/feature` and autopilot refuse to implement unapproved changes.
 - **Async by default for teams.** If the approver isn't in the session, open a spec-only
   PR; CODEOWNERS routes it. Merged spec = approved spec.
 - **Surfaced judgement calls.** Agent PRs list "Decisions I made without asking", so the
@@ -226,9 +226,9 @@ A realistic week for one reviewer: ~5 min per Gate 1 brief, ~10–20 min per Gat
 ## Daily loop (the TL;DR)
 
 1. Plan-mode chat → update `features.md` / `architecture.md`.
-2. `/opsx:propose` → answer the Gate 1 brief → agent records `approved:` (Gate 1).
-3. `/clear` → `/opsx:apply` → agent implements; hooks + react-doctor + tests self-correct.
+2. `/feature <idea>` → answer the Gate 1 brief → agent records `approved:` (Gate 1).
+3. `/clear` → `/feature <change>` → agent implements; hooks + react-doctor + tests self-correct.
 4. PR opens → CI runs → preview deploy appears.
-5. **Review PR + preview** (Gate 2) → merge → OpenSpec **archive**.
+5. **Review PR + preview** (Gate 2) → merge → `/finish <change>`.
 
 Two gates, everything else automated.

@@ -1,8 +1,8 @@
 ---
-description: Interactively scaffold and run a spec-driven, self-correcting React project — asks questions and requests permission before every step.
+description: Set up a new project from this template (run once) — asks questions and requests permission before every step, then hands off to /feature.
 ---
 
-# /react-project
+# /start
 
 You are the interactive orchestrator for a spec-driven React pipeline. Your job is to walk
 the user through starting (or continuing) a project **one step at a time**, asking for input
@@ -139,15 +139,16 @@ design skill from `features.md` + tokens. Show it, get feedback, iterate until a
 
 ## Phase E — Spec + GATE 1
 
-- Confirm, then run `/opsx:propose`.
+- Confirm, then run the `openspec-propose` skill.
 - Send the Gate 1 brief (see the `feature-pipeline` skill): risk tier, size, the decisions
   you need with your defaults. **STOP.** Do not proceed until they explicitly approve; then
   record `approved: <name>, <date>` in `tasks.md`. Re-propose if they want changes.
 
 ## Phase F — Implement loop
 
-- If the conversation is long, ask the user to run `/clear` and then `/opsx:apply <change>`
-  (you can't clear your own context). Otherwise confirm and run `/opsx:apply`.
+- If the conversation is long, ask the user to run `/clear` and then `/feature <change-name>`
+  (you can't clear your own context). Otherwise confirm and run the `openspec-apply-change`
+  skill.
 - Implement `tasks.md` one item at a time, writing tests alongside (unit, component, e2e).
 - Use the `codebase-explorer` subagent for research and the `react-reviewer` subagent for
   review after each chunk. Report what the reviewer found and how you addressed it.
@@ -158,8 +159,8 @@ design skill from `features.md` + tokens. Show it, get feedback, iterate until a
 
 - Confirm, then open a pull request (do NOT merge). Report the CI status and the preview
   URL if deploys are wired.
-- **STOP.** Ask the user to review the PR + preview and approve. After they merge, offer to
-  run OpenSpec **archive** to fold the change into the living specs.
+- **STOP.** Ask the user to review the PR + preview and approve. After they merge, tell them
+  to run `/finish` to fold the change into the living specs.
 
 ## Reminders
 

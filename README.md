@@ -18,8 +18,7 @@ npm run dev                       # http://localhost:5173
 npm run check                     # every gate the agent must pass
 ```
 
-Already set up: OpenSpec (`/opsx:propose`, `/opsx:apply`, `/opsx:archive`), the MSW
-worker, Claude Code hooks and permissions, pinned react-doctor + prettier.
+Already set up: OpenSpec, the MSW worker, Claude Code hooks and permissions, pinned react-doctor + prettier.
 
 Human-only setup on GitHub (the agent can't and shouldn't do these):
 
@@ -45,18 +44,23 @@ Human-only setup on GitHub (the agent can't and shouldn't do these):
 
 ## How to use the pipeline
 
-- **New feature (guided):** `/feature describe your change` — walks the spec-driven loop,
-  stops at the two gates (a one-screen Gate 1 brief, then the PR).
+Three commands — that's the whole interface. Claude runs the rest (the `feature-pipeline`
+and `openspec-*` skills, the reviewer subagents) behind them; those are hidden from the `/`
+menu on purpose.
+
+| Command             | When                                    | What happens                                               |
+| ------------------- | --------------------------------------- | ---------------------------------------------------------- |
+| `/start`            | once, in a repo made from this template | name the project, pick styling + UI library, set up        |
+| `/feature <idea>`   | every change                            | spec → **Gate 1** (you approve) → build → PR → **Gate 2**  |
+| `/feature <change>` | after a `/clear`, to resume             | picks the change up where it stopped                       |
+| `/finish <change>`  | after you merge the PR                  | archives the spec into `openspec/specs/`, marks it shipped |
+
+- **Or just describe it:** asking for a feature in plain words triggers the same pipeline.
 - **Where you come in:** see `PIPELINE.md` → "Human involvement" for what each gate asks
   of you and roughly how long it takes.
-- **Or just describe it:** the `feature-pipeline` skill triggers on feature/component work.
-- **Bootstrap another project like this:** `/react-project` (interactive, from scratch).
-- **Terser replies (opt-in):** `/caveman` (or `/caveman lite|ultra`) makes Claude's chat
-  replies short; `stop caveman` reverts. Code, commits, PRs, OpenSpec docs and gate
-  questions stay in normal prose. Vendored from
-  [caveman](https://github.com/JuliusBrussee/caveman) (MIT). Its optional token-saving proxy
-  is a per-machine install (`npm i -g @caveman-ai/cli`, BSL-1.1, telemetry on by default) —
-  not part of this repo.
+- **Heads-up:** `openspec update` / `openspec init` regenerates `.claude/commands/opsx/`
+  and unhides the `openspec-*` skills. Delete that folder and re-add `user-invocable: false`
+  afterwards.
 
 ## What's inside
 
@@ -64,8 +68,8 @@ Human-only setup on GitHub (the agent can't and shouldn't do these):
   API-contract policy. Loaded every session.
 - `PIPELINE.md` — the full playbook.
 - `features.md` / `architecture.md` — human-owned intent and tech decisions (the spec inputs).
-- `.claude/` — the `feature-pipeline` and opt-in `caveman` skills, `react-reviewer` + `codebase-explorer`
-  subagents, `/react-project` + `/feature` commands, OpenSpec's `/opsx:*`, self-correcting
+- `.claude/` — the `/start`, `/feature`, `/finish` commands; the hidden `feature-pipeline` +
+  `openspec-*` skills; `react-reviewer` + `codebase-explorer` subagents; self-correcting
   hooks (`hooks/`), and permissions that block merge / force-push.
 - `src/` — the fixed folder structure with a small worked example (an `items` feature that
   exercises RTK Query + Zod response validation, a Zustand UI store, an RHF + Zod form, and
