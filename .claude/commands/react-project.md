@@ -14,7 +14,7 @@ present, use it as the starting point; if empty, ask.
 ## How you must behave (read this first)
 
 1. **One decision at a time.** Ask a single, concrete question, then wait. Offer 2–4 clear
-   options when the choice is bounded (e.g. "a) Vite + React + TS  b) Next.js"). Don't dump
+   options when the choice is bounded (e.g. "a) Vite + React + TS b) Next.js"). Don't dump
    a wall of questions.
 2. **Permission before action.** Before running any command, creating files, installing
    packages, or any git operation, state exactly what you will run and why, then wait for
@@ -30,6 +30,7 @@ present, use it as the starting point; if empty, ask.
 ## Phase A — Figure out where we are
 
 Ask: is this a brand-new project, or a feature in an existing repo?
+
 - **New** → go to Phase B (bootstrap), then Phase C.
 - **Existing** → skip to Phase C.
 
@@ -46,7 +47,7 @@ Steps 1–3 are **decisions** — ask them before you scaffold or install anythi
    - c) Plain CSS / Sass
    - d) styled-components / Emotion (CSS-in-JS)
    - e) Bootstrap
-   If they're unsure, recommend Tailwind (matches design-token workflow) but let them choose.
+     If they're unsure, recommend Tailwind (matches design-token workflow) but let them choose.
 
 3. **Ask the UI component library** (one question, wait). Guide sensible pairings and flag
    conflicts rather than silently overriding:
@@ -57,8 +58,8 @@ Steps 1–3 are **decisions** — ask them before you scaffold or install anythi
    - e) Radix UI primitives (unstyled — you style them)
    - f) React-Bootstrap — pairs with Bootstrap
    - g) None / hand-built components
-   If their pick conflicts with the styling choice (e.g. shadcn/ui without Tailwind),
-   say so and offer the compatible option; don't just switch it on them.
+     If their pick conflicts with the styling choice (e.g. shadcn/ui without Tailwind),
+     say so and offer the compatible option; don't just switch it on them.
 
 4. Scaffold: `npm create vite@latest <name> -- --template react-ts`, then `npm install`.
 
@@ -78,9 +79,9 @@ Steps 1–3 are **decisions** — ask them before you scaffold or install anythi
    - Mocking: `npm i -D msw` then `npx msw init public/ --save`
    - If an OpenAPI/Swagger spec exists and you'll generate the API layer:
      `npm i -D @rtk-query/codegen-openapi`
-   These are not per-project choices: RTK Query for server state, Zustand for client state,
-   React Hook Form + Zod for forms. (If the user explicitly wants different ones, e.g.
-   Formik + Yup, honor that and update `CLAUDE.md` to match.)
+     These are not per-project choices: RTK Query for server state, Zustand for client state,
+     React Hook Form + Zod for forms. (If the user explicitly wants different ones, e.g.
+     Formik + Yup, honor that and update `CLAUDE.md` to match.)
 
 7. Test tooling: install Vitest, Testing Library, and Playwright (confirm before installing).
 
@@ -108,6 +109,7 @@ before starting the first feature.
 ## Phase C — Define the feature (ask)
 
 Ask what to build. Then make sure the intent is captured:
+
 - Update `features.md` (behaviour, states, edge cases) — show your draft, get approval.
 - Update `architecture.md` (tech decisions + design tokens) — show your draft, get approval.
 
@@ -118,6 +120,7 @@ tell, **ask which CSS approach and UI library to use** and record the answer in
 
 **Establish the API contract** for this feature before building the data layer or UI. Ask
 which case applies and record it in `architecture.md`:
+
 - a) An OpenAPI/Swagger spec exists → offer to generate the RTK Query layer with
   `@rtk-query/codegen-openapi` (ask for the spec URL/path), or hand-write it if the spec is messy.
 - b) An informal contract (Postman / sample JSON / description) → capture it as Zod schemas.

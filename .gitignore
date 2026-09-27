@@ -3,3 +3,7 @@ dist
 .env
 playwright-report
 test-results
+coverage
+blob-report
+*.tsbuildinfo
+.claude/settings.local.json

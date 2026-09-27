@@ -24,16 +24,16 @@ npx msw init public/ --save                     # generates the MSW worker (if n
 
 ## Scripts
 
-| Script | What it does |
-|---|---|
-| `npm run dev` | Vite dev server |
-| `npm run build` | Typecheck + production build |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run lint` | ESLint |
-| `npm run test` | Vitest (unit + component) |
-| `npm run test:e2e` | Playwright (starts dev server with mocks) |
-| `npm run doctor` | react-doctor health check on changed files |
-| `npm run gen:api` | Generate the RTK Query layer from an OpenAPI spec |
+| Script              | What it does                                      |
+| ------------------- | ------------------------------------------------- |
+| `npm run dev`       | Vite dev server                                   |
+| `npm run build`     | Typecheck + production build                      |
+| `npm run typecheck` | `tsc --noEmit`                                    |
+| `npm run lint`      | ESLint                                            |
+| `npm run test`      | Vitest (unit + component)                         |
+| `npm run test:e2e`  | Playwright (starts dev server with mocks)         |
+| `npm run doctor`    | react-doctor health check on changed files        |
+| `npm run gen:api`   | Generate the RTK Query layer from an OpenAPI spec |
 
 ## How to use the pipeline
 
