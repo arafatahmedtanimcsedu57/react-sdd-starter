@@ -21,15 +21,20 @@ Read the changed files and check for:
 - **Accessibility**: inputs without labels, images without alt text, buttons without
   accessible names, missing keyboard handlers, misuse of ARIA roles.
 - **Conventions** (from CLAUDE.md): named exports only, one component per file, explicit
-  `<Component>Props` interface, Tailwind-only styling, data fetching in `use*` hooks,
-  a colocated test for new logic.
+  `<Component>Props` interface, styling per `architecture.md`, RTK Query endpoints in
+  `src/features/<domain>/api.ts`, a colocated test for new logic.
+- **Spec fit**: if an OpenSpec change is named, check the diff against its `tasks.md` —
+  flag anything built that the spec didn't ask for, and anything asked for that's missing.
+- **Unasked decisions**: list judgement calls the code makes that the spec didn't settle
+  (UX copy, edge-case behaviour, fallbacks). The main agent puts these in the PR under
+  "Decisions I made without asking" for the human to confirm.
 
 ## react-doctor pass
 
 Run:
 
 ```
-npx -y react-doctor@latest --verbose --scope changed
+npm run doctor -- --verbose
 ```
 
 Report the health score and any NEW regressions. Treat findings as signals to investigate,
@@ -37,6 +42,16 @@ not absolute verdicts — flag likely false positives as such rather than demand
 
 ## Output format
 
-Return a short, prioritized list. For each issue: `file:line` — one sentence describing the
-problem and the fix direction. Errors first, then warnings, then nits. If nothing needs
-changing, say so plainly. Do not restate the whole diff.
+One line per finding, terse (format from caveman-review):
+`<file>:L<line>: <severity> <problem>. <fix>.`
+
+Severity: `🔴 bug:` broken behaviour · `🟡 risk:` works but fragile · `🔵 nit:` style ·
+`❓ q:` genuine question. Order: bugs, risks, nits, questions. Keep exact symbol names in
+backticks; give a concrete fix, not "consider refactoring". No hedging, no praise, no
+restating the diff. Example: `src/features/items/api.ts:L23: 🟡 risk: no Zod guard on
+response. Add transformResponse with itemSchema.parse.`
+
+Write a normal paragraph instead for security findings and architectural disagreements
+(they need the why). Put the react-doctor score on one line, and "Unasked decisions" as a
+plain list — the main agent copies it into the PR. If nothing needs changing, say
+`No issues.`

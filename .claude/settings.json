@@ -1,14 +1,42 @@
 {
+  "permissions": {
+    "deny": [
+      "Bash(gh pr merge:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git push origin master:*)",
+      "Edit(**/src/services/generatedApi.ts)",
+      "Edit(**/public/mockServiceWorker.js)"
+    ],
+    "ask": [
+      "Bash(npm install:*)",
+      "Bash(npm i:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)",
+      "Edit(**/.github/**)",
+      "Edit(**/CLAUDE.md)",
+      "Edit(**/.claude/settings.json)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
         "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit.sh" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.file_path // empty' | xargs -r npx prettier --write --ignore-unknown"
-          },
-          { "type": "command", "command": "npm run typecheck" }
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-check.sh",
+            "timeout": 180
+          }
         ]
       }
     ]

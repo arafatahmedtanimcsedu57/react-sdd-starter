@@ -11,12 +11,16 @@ async function enableMocking() {
   return worker.start({ onUnhandledRequest: 'bypass' })
 }
 
-enableMocking().then(() => {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <Provider store={store}>
-        <App />
-      </Provider>
-    </StrictMode>,
-  )
-})
+// Render even if the mock worker fails to start, so a mocking problem shows up as failed
+// requests in the console instead of a blank page.
+enableMocking()
+  .catch((error) => console.error('MSW failed to start', error))
+  .then(() => {
+    createRoot(document.getElementById('root')!).render(
+      <StrictMode>
+        <Provider store={store}>
+          <App />
+        </Provider>
+      </StrictMode>,
+    )
+  })

@@ -1,0 +1,33 @@
+schema: spec-driven
+
+context: |
+  React 19 + Vite 8 + TypeScript 6 (strict). Styling and UI library: see architecture.md.
+  Server state: RTK Query (endpoints injected from src/features/<domain>/api.ts).
+  Client state: Zustand. Forms: React Hook Form + Zod. Mocks: MSW from the Zod contract.
+  Product intent lives in features.md; tech decisions in architecture.md. Conventions and
+  folder layout are in CLAUDE.md — follow it over habit.
+  One change = one PR, max 400 reviewable lines (tests, mocks, specs, generated code excluded).
+
+rules:
+  proposal:
+    - 'Start with a "Risk tier: low | medium | high" line, using the definitions in CLAUDE.md → Human in the loop'
+    - 'Include an "Open questions" section. List every product/UX/contract decision you could not settle from features.md or architecture.md, each with your suggested default. Write "None" only if there truly are none'
+    - 'Include a "Non-goals" section'
+    - 'If this change depends on another, add a line "depends on: <change-name>"'
+    - 'List any new npm dependency with a one-line justification; a new dependency makes the change at least medium risk'
+  tasks:
+    - 'First line: "Estimated reviewable lines: <n>". If n > 400, propose a split instead of one tasks.md'
+    - 'Order tasks contract → logic → UI → wiring → e2e; each task names the file(s) it touches, placed per CLAUDE.md folder structure'
+    - 'Every behaviour task has a matching test task (unit, component or e2e)'
+    - 'Last line must be exactly "approved: <pending>". Never fill it in yourself — only the human reviewer replaces <pending> with their name and date'
+
+operations:
+  apply:
+    guidance:
+      - 'Refuse to start if tasks.md still says "approved: <pending>" — ask the human to review it first (Gate 1)'
+      - 'If you hit a decision the spec does not settle, stop and ask instead of guessing; record the answer in proposal.md under "Open questions"'
+      - 'Keep a running "Decisions I made without asking" list for the PR description'
+      - 'Finish with npm run check; do not tick a task until its test passes'
+  archive:
+    guidance:
+      - 'Only archive after the PR is merged. Summarise any reviewer corrections that should become CLAUDE.md rules and propose them to the human'

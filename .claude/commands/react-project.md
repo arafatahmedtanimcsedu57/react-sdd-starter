@@ -14,7 +14,7 @@ present, use it as the starting point; if empty, ask.
 ## How you must behave (read this first)
 
 1. **One decision at a time.** Ask a single, concrete question, then wait. Offer 2–4 clear
-   options when the choice is bounded (e.g. "a) Vite + React + TS  b) Next.js"). Don't dump
+   options when the choice is bounded (e.g. "a) Vite + React + TS b) Next.js"). Don't dump
    a wall of questions.
 2. **Permission before action.** Before running any command, creating files, installing
    packages, or any git operation, state exactly what you will run and why, then wait for
@@ -30,6 +30,7 @@ present, use it as the starting point; if empty, ask.
 ## Phase A — Figure out where we are
 
 Ask: is this a brand-new project, or a feature in an existing repo?
+
 - **New** → go to Phase B (bootstrap), then Phase C.
 - **Existing** → skip to Phase C.
 
@@ -46,7 +47,7 @@ Steps 1–3 are **decisions** — ask them before you scaffold or install anythi
    - c) Plain CSS / Sass
    - d) styled-components / Emotion (CSS-in-JS)
    - e) Bootstrap
-   If they're unsure, recommend Tailwind (matches design-token workflow) but let them choose.
+     If they're unsure, recommend Tailwind (matches design-token workflow) but let them choose.
 
 3. **Ask the UI component library** (one question, wait). Guide sensible pairings and flag
    conflicts rather than silently overriding:
@@ -57,14 +58,14 @@ Steps 1–3 are **decisions** — ask them before you scaffold or install anythi
    - e) Radix UI primitives (unstyled — you style them)
    - f) React-Bootstrap — pairs with Bootstrap
    - g) None / hand-built components
-   If their pick conflicts with the styling choice (e.g. shadcn/ui without Tailwind),
-   say so and offer the compatible option; don't just switch it on them.
+     If their pick conflicts with the styling choice (e.g. shadcn/ui without Tailwind),
+     say so and offer the compatible option; don't just switch it on them.
 
 4. Scaffold: `npm create vite@latest <name> -- --template react-ts`, then `npm install`.
 
 5. Install and configure the chosen styling + UI library (state the exact packages, confirm
    before installing). Typical commands:
-   - Tailwind: `npm i -D tailwindcss postcss autoprefixer && npx tailwindcss init -p`
+   - Tailwind: `npm i -D tailwindcss @tailwindcss/vite`, add `tailwindcss()` to `vite.config.ts`, and `@import 'tailwindcss'` in the main CSS
    - shadcn/ui: `npx shadcn@latest init` (after Tailwind)
    - MUI: `npm i @mui/material @emotion/react @emotion/styled`
    - Chakra: `npm i @chakra-ui/react @emotion/react @emotion/styled framer-motion`
@@ -78,15 +79,18 @@ Steps 1–3 are **decisions** — ask them before you scaffold or install anythi
    - Mocking: `npm i -D msw` then `npx msw init public/ --save`
    - If an OpenAPI/Swagger spec exists and you'll generate the API layer:
      `npm i -D @rtk-query/codegen-openapi`
-   These are not per-project choices: RTK Query for server state, Zustand for client state,
-   React Hook Form + Zod for forms. (If the user explicitly wants different ones, e.g.
-   Formik + Yup, honor that and update `CLAUDE.md` to match.)
+     These are not per-project choices: RTK Query for server state, Zustand for client state,
+     React Hook Form + Zod for forms. (If the user explicitly wants different ones, e.g.
+     Formik + Yup, honor that and update `CLAUDE.md` to match.)
 
 7. Test tooling: install Vitest, Testing Library, and Playwright (confirm before installing).
 
-8. Spec layer: `npx @fission-ai/openspec@latest init`.
+8. Spec layer: `npm i -D @fission-ai/openspec && npx openspec init --tools claude`, then
+   copy this starter's `openspec/config.yaml` (risk tier, open questions, size estimate and
+   `approved:` rules).
 
-9. React reviewer: `npx react-doctor@latest install --agent-hooks`.
+9. React reviewer: `npm i -D react-doctor prettier` (pinned — never `@latest` in scripts),
+   and copy `.claude/hooks/` + `.claude/settings.json` from this starter.
 
 10. Drop in the project files (confirm each): `CLAUDE.md` (ships with the state/data/form
     rules already in it — fill in the project name), `.claude/settings.json` hooks,
@@ -108,6 +112,7 @@ before starting the first feature.
 ## Phase C — Define the feature (ask)
 
 Ask what to build. Then make sure the intent is captured:
+
 - Update `features.md` (behaviour, states, edge cases) — show your draft, get approval.
 - Update `architecture.md` (tech decisions + design tokens) — show your draft, get approval.
 
@@ -118,6 +123,7 @@ tell, **ask which CSS approach and UI library to use** and record the answer in
 
 **Establish the API contract** for this feature before building the data layer or UI. Ask
 which case applies and record it in `architecture.md`:
+
 - a) An OpenAPI/Swagger spec exists → offer to generate the RTK Query layer with
   `@rtk-query/codegen-openapi` (ask for the spec URL/path), or hand-write it if the spec is messy.
 - b) An informal contract (Postman / sample JSON / description) → capture it as Zod schemas.
@@ -133,24 +139,25 @@ design skill from `features.md` + tokens. Show it, get feedback, iterate until a
 
 ## Phase E — Spec + GATE 1
 
-- Confirm, then run OpenSpec **propose**.
-- Present `tasks.md` in full. **STOP.** Ask the user to review and approve, or request
-  changes. Do not proceed until they approve. Re-propose if they want changes.
+- Confirm, then run `/opsx:propose`.
+- Send the Gate 1 brief (see the `feature-pipeline` skill): risk tier, size, the decisions
+  you need with your defaults. **STOP.** Do not proceed until they explicitly approve; then
+  record `approved: <name>, <date>` in `tasks.md`. Re-propose if they want changes.
 
 ## Phase F — Implement loop
 
-- Confirm, then `/clear` context and run OpenSpec **apply**.
+- If the conversation is long, ask the user to run `/clear` and then `/opsx:apply <change>`
+  (you can't clear your own context). Otherwise confirm and run `/opsx:apply`.
 - Implement `tasks.md` one item at a time, writing tests alongside (unit, component, e2e).
 - Use the `codebase-explorer` subagent for research and the `react-reviewer` subagent for
   review after each chunk. Report what the reviewer found and how you addressed it.
-- Before declaring done, run and show the result of:
-  `npm run typecheck && npm run lint && npm run test && npm run doctor`
+- Before declaring done, run and show the result of `npm run check`
   If anything fails, fix and re-run — do not stop on red.
 
 ## Phase G — Ship + GATE 2
 
-- Confirm, then open a pull request (do NOT merge). Report the CI status and the Vercel
-  preview URL.
+- Confirm, then open a pull request (do NOT merge). Report the CI status and the preview
+  URL if deploys are wired.
 - **STOP.** Ask the user to review the PR + preview and approve. After they merge, offer to
   run OpenSpec **archive** to fold the change into the living specs.
 
