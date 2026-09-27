@@ -10,6 +10,11 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # typescript-eslint caps its TypeScript peer range; bump TS majors by hand
+      # once typescript-eslint supports them, or `npm ci` fails with ERESOLVE.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule:
