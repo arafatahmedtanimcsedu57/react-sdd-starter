@@ -1,6 +1,9 @@
-import { ItemsPage } from './routes/ItemsPage'
+import { createBrowserRouter, RouterProvider } from 'react-router'
+import { routes } from './routes/routes'
 
-// App shell. Add a router here when there is more than one page.
+const router = createBrowserRouter(routes)
+
+// App shell: the router. Pages and the error / loading screens live in src/routes/.
 export function App() {
-  return <ItemsPage />
+  return <RouterProvider router={router} />
 }

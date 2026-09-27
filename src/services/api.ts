@@ -1,11 +1,11 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { createApi } from '@reduxjs/toolkit/query/react'
+import { baseQuery } from './baseQuery'
 
-// Base RTK Query slice. Features inject their endpoints from src/features/<domain>/api.ts.
-// Hand-written form (no clean OpenAPI spec). When a spec exists, generate endpoints
-// instead — see CLAUDE.md -> API contracts and src/services/emptyApi.ts.
+// The app's single RTK Query slice. Hand-written endpoints inject from
+// src/features/<domain>/api.ts; `npm run gen:api` injects generated ones into this same slice
+// (src/services/generatedApi.ts), so there is one cache and one store entry either way.
 export const api = createApi({
   reducerPath: 'api',
-  // Absolute so Node's Request (tests) can parse it; same-origin in the browser.
-  baseQuery: fetchBaseQuery({ baseUrl: `${globalThis.location?.origin ?? ''}/api` }),
+  baseQuery,
   endpoints: () => ({}),
 })

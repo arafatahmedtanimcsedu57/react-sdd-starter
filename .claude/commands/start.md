@@ -62,7 +62,10 @@ The template ships **Tailwind CSS 4** and **no UI library** (see `architecture.m
 Ask first (default **yes, remove it**). If yes:
 
 - Delete `src/features/items/`, `src/routes/ItemsPage.tsx`, `src/routes/ItemsPage.test.tsx`.
-- `src/App.tsx` → a minimal placeholder shell (an `<h1>` with the project name).
+- Add `src/routes/HomePage.tsx` (a `<main>` with an `<h1>` of the project name) and point the
+  index route in `src/routes/routes.tsx` at it (keep it lazy). Update the first test in
+  `src/routes/routes.test.tsx` to expect that heading. Leave `RootLayout`, `RouteError`,
+  `RouteLoading` and `src/App.tsx` as they are.
 - `src/mocks/handlers.ts` → `export const handlers = []` plus an exported no-op
   `resetMockData()` (the test setup calls it); keep the comment about parsing fixtures
   through the Zod schema.

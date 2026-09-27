@@ -13,6 +13,7 @@ Authoritative rules for this repo. Claude reads this every session — follow it
 - E2E: npm run test:e2e
 - Doctor: npm run doctor
 - Format: npm run format
+- Coverage: npm run test:coverage
 - All gates (definition of done): npm run check
 
 Hooks already run prettier + eslint + typecheck after every edit, and related tests +
@@ -90,9 +91,10 @@ rename these.
 ```
 src/
 ├── main.tsx              # entry — wraps <App/> in <Provider store={store}>
-├── App.tsx               # app shell + router
+├── App.tsx               # app shell — mounts the router
 ├── store.ts              # RTK Query store (configureStore)
-├── routes/               # route / page components (one per route)
+├── routes/               # routes.tsx (the route table) + one page component per route,
+│                         #   RootLayout, RouteError (error boundary + 404), RouteLoading
 ├── features/             # feature-scoped code — one folder per domain
 │   └── <feature>/
 │       ├── components/   #   feature UI + colocated *.test.tsx
@@ -104,10 +106,12 @@ src/
 │   └── ui/               #   design-system primitives (shadcn / MUI wrappers)
 ├── hooks/                # shared reusable hooks (use*)
 ├── lib/                  # pure logic + utilities + colocated tests
-├── services/             # RTK Query base slice (createApi) + shared query code
-│   └── api.ts
+│   └── env.ts            #   validated VITE_* env (the only place that reads import.meta.env)
+├── services/             # RTK Query: the one api slice + shared query code
+│   ├── api.ts            #   createApi — every endpoint injects into this
+│   └── baseQuery.ts      #   base URL, auth header, 401 → sign out
 ├── mocks/                # MSW handlers + browser/node servers (from the API contract)
-├── stores/               # shared / global Zustand stores
+├── stores/               # shared / global Zustand stores (useSessionStore = auth token)
 ├── types/                # shared TS types
 ├── styles/               # global styles / tokens
 └── test/setup.ts         # test setup
@@ -124,6 +128,13 @@ Placement rules:
   `src/features/<domain>/api.ts`.
 - Reusable UI → `src/components/` (`components/ui/` for primitives); pages → `src/routes/`.
 - Tests are colocated next to the file they test; only Playwright specs live in `e2e/`.
+- New page → `src/routes/<Name>Page.tsx` + one entry in `src/routes/routes.tsx` (lazy-loaded).
+- New env variable → `src/lib/env.ts` (Zod) + `src/vite-env.d.ts` + `.env.example`. Never
+  read `import.meta.env` anywhere else.
+- Import direction is enforced by ESLint: `lib/` + `types/` import no app layer;
+  `components/`, `hooks/`, `stores/`, `services/` never import `features/` or `routes/`;
+  `features/` never imports `routes/`. A feature doesn't reach into another feature's
+  `components/` — move shared pieces up to `src/components/` or `src/lib/`.
 - Small apps may start with just the top-level folders and add `features/<domain>/` as they
   grow — keep these names; never add a parallel folder that does the same job.
 
@@ -148,12 +159,9 @@ Three libraries, three jobs — do not mix them up:
   mocking** below. The hand-written form below is for when there's no clean spec.
 
 ```ts
-// src/services/api.ts — base slice only, no endpoints
-export const api = createApi({
-  reducerPath: 'api',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  endpoints: () => ({}),
-})
+// src/services/api.ts — the ONE slice, no endpoints. baseQuery adds the base URL from env,
+// the Bearer token from useSessionStore, and signs out on 401. Never create a second slice.
+export const api = createApi({ reducerPath: 'api', baseQuery, endpoints: () => ({}) })
 
 // src/features/items/api.ts — the feature owns its endpoints + tags
 export const itemsApi = api.enhanceEndpoints({ addTagTypes: ['Item'] }).injectEndpoints({
@@ -271,18 +279,13 @@ Three cases — pick based on what exists:
   drifts from the agreed shape fails loudly instead of silently.
 
 ```ts
-// codegen (case 1a): src/services/emptyApi.ts + openapi-config.ts, then `npm run gen:api`
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-export const emptyApi = createApi({
-  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  endpoints: () => ({}),
-})
+// codegen (case 1a): generated endpoints inject into the same `api` slice, then `npm run gen:api`
 // openapi-config.ts
 import type { ConfigFile } from '@rtk-query/codegen-openapi'
 const config: ConfigFile = {
   schemaFile: './openapi.json', // or a URL to the live Swagger
-  apiFile: './src/services/emptyApi.ts',
-  apiImport: 'emptyApi',
+  apiFile: './src/services/api.ts',
+  apiImport: 'api',
   outputFile: './src/services/generatedApi.ts',
   hooks: true,
 }
@@ -301,8 +304,9 @@ getItems: build.query<Item[], void>({
 // mocks from the contract:  src/mocks/handlers.ts
 import { http, HttpResponse } from 'msw'
 import { itemSchema } from '../features/items/schema'
+import { apiBaseUrl } from '../lib/env'
 const items = [itemSchema.parse({ id: '1', name: 'Example' })] // fixture must satisfy the schema
-export const handlers = [http.get('/api/items', () => HttpResponse.json(items))]
+export const handlers = [http.get(`${apiBaseUrl}/items`, () => HttpResponse.json(items))]
 // src/mocks/browser.ts  → setupWorker(...handlers)   (dev / frontend-first)
 // src/mocks/server.ts   → setupServer(...handlers)   (tests)
 ```
@@ -315,6 +319,10 @@ export const handlers = [http.get('/api/items', () => HttpResponse.json(items))]
   `src/test/setup.ts` (`listen` / `resetHandlers` / `close`); for e2e, run the dev server with
   mocking enabled or hit a real backend when one exists.
 - Test Zustand stores as plain functions; test Zod schemas directly for edge cases.
+- Helpers in `src/test/render.tsx`: `renderWithStore(ui)` for a component, `renderRoute(path)`
+  for a whole page through the router. MSW handlers use `apiBaseUrl` from `src/lib/env.ts`.
+- Coverage floors live in `vitest.config.ts`. Raise them as the suite grows; never lower
+  them to get green.
 
 ## Pull requests (fixed rules)
 
@@ -328,6 +336,10 @@ export const handlers = [http.get('/api/items', () => HttpResponse.json(items))]
 ## Definition of done (self-check ALL before stopping)
 
 ```
-npm run check        # typecheck + lint + format:check + test + doctor
+npm run check        # typecheck + lint + format:check + test:coverage + doctor
+npm run build        # when adding dependencies or pages — enforces the bundle budget
 npm run test:e2e     # when the change touches a user flow
 ```
+
+The bundle budget (`CHUNK_BUDGET_KB` in `vite.config.ts`) fails the build when a JS chunk
+grows too big. Fix it with lazy loading or a lighter dependency; raising it is a human call.

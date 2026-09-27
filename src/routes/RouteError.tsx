@@ -1,0 +1,24 @@
+import { isRouteErrorResponse, Link, useRouteError } from 'react-router'
+
+// The app's error boundary: unknown URLs and any error thrown while rendering a page.
+export function RouteError() {
+  const error = useRouteError()
+  const notFound = isRouteErrorResponse(error) && error.status === 404
+  if (!notFound) console.error(error)
+
+  return (
+    <main className="mx-auto max-w-md p-6">
+      <h1 className="text-xl font-semibold">
+        {notFound ? 'Page not found' : 'Something went wrong'}
+      </h1>
+      <p className="my-4">
+        {notFound
+          ? 'The page you asked for does not exist.'
+          : 'An unexpected error happened. Try reloading the page.'}
+      </p>
+      <Link to="/" reloadDocument className="underline">
+        Go to the home page
+      </Link>
+    </main>
+  )
+}
