@@ -12,6 +12,48 @@ Authoritative rules for this repo. Claude reads this every session — follow it
 - Test: npm run test
 - E2E: npm run test:e2e
 - Doctor: npm run doctor
+- Format: npm run format
+- All gates (definition of done): npm run check
+
+Hooks already run prettier + eslint + typecheck after every edit, and related tests +
+react-doctor before you finish a turn. Their errors come back to you — fix them, don't
+work around them.
+
+## Human in the loop
+
+A person owns intent, decisions and merges. You own execution. Act, but know when to stop.
+
+**Stop and ask — never guess — when:**
+
+- the spec / `features.md` doesn't settle a product or UX behaviour (copy, empty/error
+  states, what happens on edge cases)
+- a change touches the API contract (a Zod schema, an endpoint, a response shape)
+- you want a new dependency, or to change `architecture.md`, `CLAUDE.md`, CI or hooks
+- you'd delete or rewrite code outside the change's scope
+- the same check fails 3 times and you don't know why
+
+Ask one concrete question with your recommended answer, so the human can reply "yes".
+
+**Risk tiers** (set in every `proposal.md`; decides how much human attention it needs):
+
+| Tier   | Examples                                          | Human involvement                          |
+| ------ | ------------------------------------------------- | ------------------------------------------ |
+| low    | copy, styling, a test, a small isolated component | Gate 2 only; skim is fine                  |
+| medium | new feature UI, state logic, a new dependency     | Gate 1 + Gate 2 with preview click-through |
+| high   | contract/schema, auth, money, data deletion, CI   | Gate 1 + Gate 2 + a second reviewer        |
+
+**Gates:**
+
+- Gate 1 — the human approves `tasks.md`. Approval is only real when **they** say so; you
+  then write `approved: <their name>, <date>` as the last line of `tasks.md`. Never write
+  it on your own initiative. Autopilot only builds changes that carry this line.
+- Gate 2 — the human reviews the PR + preview and merges. You never merge or push to the
+  default branch (both are blocked in `.claude/settings.json`).
+- While waiting at a gate, don't start the next step. Say what you're waiting for and what
+  the human needs to decide, in one or two lines.
+
+**Learn from corrections:** if a human corrects the same kind of thing twice, propose a
+one-line rule for this file. Don't add it until they agree.
 
 ## Component conventions
 
@@ -87,37 +129,28 @@ Three libraries, three jobs — do not mix them up:
   mocking** below. The hand-written form below is for when there's no clean spec.
 
 ```ts
-// src/services/api.ts
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-
+// src/services/api.ts — base slice only, no endpoints
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['Item'],
+  endpoints: () => ({}),
+})
+
+// src/features/items/api.ts — the feature owns its endpoints + tags
+export const itemsApi = api.enhanceEndpoints({ addTagTypes: ['Item'] }).injectEndpoints({
   endpoints: (build) => ({
-    getItems: build.query<Item[], void>({
-      query: () => 'items',
-      providesTags: ['Item'],
-    }),
+    getItems: build.query<Item[], void>({ query: () => 'items', providesTags: ['Item'] }),
     addItem: build.mutation<Item, NewItem>({
       query: (body) => ({ url: 'items', method: 'POST', body }),
       invalidatesTags: ['Item'],
     }),
   }),
 })
-export const { useGetItemsQuery, useAddItemMutation } = api
+export const { useGetItemsQuery, useAddItemMutation } = itemsApi
 ```
 
-```ts
-// src/store.ts  — wrap <App/> in <Provider store={store}>
-import { configureStore } from '@reduxjs/toolkit'
-import { api } from './services/api'
-
-export const store = configureStore({
-  reducer: { [api.reducerPath]: api.reducer },
-  middleware: (getDefault) => getDefault().concat(api.middleware),
-})
-```
+`src/store.ts` exports `makeStore()` (fresh store per test via `src/test/render.tsx`) and the
+app's `store`, which `main.tsx` passes to `<Provider>`.
 
 ### Client / UI state — Zustand
 
@@ -276,5 +309,6 @@ export const handlers = [http.get('/api/items', () => HttpResponse.json(items))]
 ## Definition of done (self-check ALL before stopping)
 
 ```
-npm run typecheck && npm run lint && npm run test && npm run doctor
+npm run check        # typecheck + lint + format:check + test + doctor
+npm run test:e2e     # when the change touches a user flow
 ```

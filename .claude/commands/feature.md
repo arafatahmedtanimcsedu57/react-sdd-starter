@@ -4,8 +4,8 @@ description: Run one feature or change through the spec-driven loop in an existi
 
 # /feature
 
-Day-to-day driver for a single change in an already-set-up repo. Assumes `openspec`,
-tests, react-doctor agent-hooks, `CLAUDE.md`, and `.claude/settings.json` already exist.
+Day-to-day driver for a single change in an already-set-up repo. Assumes `openspec`
+(`/opsx:*` commands), tests, `CLAUDE.md`, and `.claude/settings.json` hooks already exist.
 Follow the `feature-pipeline` skill for step details; this command just runs the loop with
 minimal ceremony.
 
@@ -15,7 +15,9 @@ Argument: `$ARGUMENTS` is the feature/change description. If empty, ask what to 
 
 - Move briskly. Don't ask permission for routine, reversible steps (writing spec files,
   running tests, running react-doctor). DO confirm before irreversible or noisy actions
-  (installing packages, git push, opening a PR).
+  (installing packages, git push, opening a PR) — settings.json asks for these anyway.
+- Stop and ask on the triggers in `CLAUDE.md` → Human in the loop. One question, with
+  your recommended answer.
 - **Always stop at the two gates**, even in fast mode.
 
 ## Steps
@@ -25,18 +27,22 @@ Argument: `$ARGUMENTS` is the feature/change description. If empty, ask what to 
    where things live. If the change touches an API, **establish the contract first** (see
    `CLAUDE.md` → API contracts): generate/hand-write from a spec, capture an informal contract
    as Zod schemas, or — if the API isn't built yet — write the contract and mock it with MSW.
-2. **Spec + GATE 1** — run OpenSpec **propose**. If the change will exceed 400 reviewable
-   lines, split it into smaller changes (one per PR; see the skill). Present `tasks.md` (and
-   the split, if any) and STOP for approval.
-3. **Implement** — `/clear`, run OpenSpec **apply**, implement task-by-task with tests.
-   Hooks + react-doctor self-correct on each edit. Run `react-reviewer` after a chunk.
-4. **Verify** — must pass before done:
-   `npm run typecheck && npm run lint && npm run test && npm run doctor`
+2. **Spec + GATE 1** — run `/opsx:propose`. If the change will exceed 400 reviewable
+   lines, split it into smaller changes (one per PR; see the skill). Send the short Gate 1
+   brief from the skill (risk, size, decisions needed with defaults) and STOP. On explicit
+   approval, record `approved: <name>, <date>` in `tasks.md`.
+   For a **low**-risk change the human may say "skip Gate 1" — then note that in the PR.
+3. **Implement** — if the conversation is long, ask the human to `/clear` and run
+   `/opsx:apply <change>`; otherwise run it directly. Implement task-by-task with tests.
+   Hooks self-correct on each edit and at turn end. Run `react-reviewer` after a chunk.
+4. **Verify** — must pass before done: `npm run check` (+ `npm run test:e2e` for flows).
 5. **Ship + GATE 2** — open a PR (never merge) using `.github/pull_request_template.md`,
-   with the "Review carefully" / "Safe to skim" sections filled in. Report CI status + Vercel preview URL, then
-   STOP for review. After merge, offer to run OpenSpec **archive**.
+   filling in "Review carefully", "Decisions I made without asking" and "Safe to skim".
+   Report CI status + preview URL (if deploys are wired), then STOP for review. After
+   merge, offer `/opsx:archive` and propose `CLAUDE.md` rules for repeated corrections.
 
 ## Reminder
 
-Two gates are non-negotiable: `tasks.md` review before implementing, PR review before merge.
-Everything between them can move fast.
+Two gates: `tasks.md` review before implementing (skippable only for low-risk changes, and
+only when the human says so), PR review before merge (never skippable). Everything between
+them can move fast.

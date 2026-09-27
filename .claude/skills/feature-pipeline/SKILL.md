@@ -34,6 +34,11 @@ make those directly — don't spin up the whole loop.
 If the human is not available to clear a gate, stop and wait. Do not proceed past a gate
 on your own.
 
+Humans are busy. Make each gate cheap: ask for **decisions**, not a full read. A good gate
+message fits on one screen and can be answered with "yes", "yes except 2", or a short
+correction. How much attention a change needs depends on its **risk tier** (see
+`CLAUDE.md` → Human in the loop).
+
 ## Steps
 
 ### 1. Define (human-led)
@@ -63,9 +68,10 @@ on your own.
 
 ### 3. Spec + GATE 1
 
-- Run OpenSpec's **propose** command (the slash command registered by `openspec init`).
-  It produces `proposal.md`, delta specs, `design.md`, and `tasks.md` under
-  `openspec/changes/`.
+- Run OpenSpec **propose** (`/opsx:propose`, or the `openspec-propose` skill). It produces
+  `proposal.md`, delta specs, `design.md`, and `tasks.md` under `openspec/changes/`, and
+  follows the rules in `openspec/config.yaml` (risk tier, open questions, size estimate,
+  `approved: <pending>` line).
 - **Size the change before Gate 1.** One OpenSpec change = one PR, and CI fails any PR over
   **400 reviewable lines** (tests, mocks, specs, lockfiles and generated code don't count —
   see `.github/workflows/pr-size.yml`). Estimate the size from `tasks.md`. If it will
@@ -75,17 +81,39 @@ on your own.
   2. UI: components + component tests
   3. wiring: route/page + e2e
      Note each change's dependencies in its `proposal.md` ("depends on: <change-name>").
-- **STOP. Present `tasks.md` to the human and wait for approval.** Confirm: scope is right,
-  task order is sane, the design references the mockup and tokens, and — if you split the
-  work — the split and its order.
+- **STOP at Gate 1.** Don't paste the whole `tasks.md`. Send a short brief:
+
+  ```
+  Gate 1 — <change-name>   Risk: <tier>   ~<n> reviewable lines   <split: 1 of 3 | none>
+  Builds: <one sentence>
+  Decisions I need (my default in brackets):
+    1. <open question> [<default>]
+    2. ...
+  New dependencies: <none | pkg — why>
+  Full plan: openspec/changes/<change-name>/tasks.md
+  Reply "approve", or tell me what to change.
+  ```
+
+- When they approve, write their answers into `proposal.md` → "Open questions" and replace
+  the last line of `tasks.md` with `approved: <their name>, <date>`. Only on their explicit
+  approval — silence, "looks interesting" or a question is not approval.
+- **Async option** (teams, or when the human isn't in this session): commit the change
+  folder on a branch and open a **spec PR** (only `openspec/` files). CODEOWNERS routes it;
+  the reviewer adds the `approved:` line in their review. Once merged, the change is eligible
+  for `/opsx:apply` or autopilot.
 
 ### 4. Implement loop (self-correcting)
 
-- Before implementing, clear context (`/clear`) so you work from the spec file, not a
-  bloated transcript.
-- Run OpenSpec's **apply** command. Work down the `tasks.md` checklist one item at a time.
-- On every edit, the hooks run automatically (prettier + typecheck), and react-doctor's
-  agent-hook feeds findings back. React to those findings immediately — fix, don't defer.
+- Fresh context helps: you can't clear it yourself, so if the conversation is long, ask the
+  human to run `/clear` and then `/opsx:apply <change-name>`. If it's short, just continue.
+- Run OpenSpec **apply** (`/opsx:apply <change-name>`). It refuses to start while
+  `tasks.md` still says `approved: <pending>`. Work down the checklist one item at a time.
+- Hooks self-correct as you go: after every edit, prettier + eslint + typecheck run on the
+  file; before you end a turn, the tests related to changed files and react-doctor run.
+  Their errors come back to you — fix immediately, don't defer.
+- Hit a decision the spec doesn't settle? Stop and ask (one question, your default
+  attached). If it's minor and reversible, pick the default and log it under "Decisions I
+  made without asking" for the PR.
 - Write tests as you go (see "Testing standard" below). Every new piece of logic gets a test.
 - Place every new file according to the **folder structure** in `CLAUDE.md`; never invent a
   new top-level folder or a parallel one that does the same job.
@@ -97,10 +125,13 @@ on your own.
 You may not consider a task complete until this passes:
 
 ```
-npm run typecheck && npm run lint && npm run test && npm run doctor
+npm run check        # typecheck + lint + format:check + test + doctor
+npm run test:e2e     # if the change touches a user flow
 ```
 
 If any step fails, fix it and re-run. This is the self-correct loop — do not stop on red.
+If the same failure survives 3 honest attempts, stop and tell the human what you tried and
+what you think is wrong. Don't disable a test, a lint rule or a hook to get green.
 
 ### 6. Ship + GATE 2
 
@@ -111,9 +142,17 @@ If any step fails, fix it and re-run. This is the self-correct loop — do not s
   are the point: tell the reviewer exactly which lines carry risk and why, so they don't
   have to read everything with equal attention.
 - CI will re-run the full gate plus the PR size check; Vercel will post a preview URL.
-- **STOP. Do not merge.** Present the PR and preview to the human for review.
-- After the human merges, run OpenSpec's **archive** command to fold the change into the
-  living specs under `openspec/specs/`.
+- **STOP at Gate 2. Do not merge** (it's blocked anyway). Send a short brief: PR link, risk
+  tier, the 1–3 places to read carefully, and the "Decisions I made without asking" list.
+- Review comments: address each one, reply on the thread with what you changed, and push.
+  If you disagree with a comment, say why once and let the human decide.
+- After the human merges, run `/opsx:archive <change-name>` to fold the change into the
+  living specs under `openspec/specs/`, and mark it shipped in `features.md`.
+
+### 7. Learn (after merge)
+
+- Look back at what the human corrected at both gates. If a correction is a pattern (not a
+  one-off), propose a one-line `CLAUDE.md` rule. Add it only if they agree.
 
 ## Testing standard
 
@@ -137,7 +176,7 @@ Three layers, all via Vitest / React Testing Library / Playwright:
 
 ## Guardrails
 
-- Never skip either human gate.
+- Never skip either human gate, and never write the `approved:` line on your own.
 - Keep PRs reviewable: one OpenSpec change per PR, at most 400 reviewable lines. Split the
   work instead of asking for the `large-pr-approved` label; that label is for the human to
   add for rare cases like a mechanical rename.
