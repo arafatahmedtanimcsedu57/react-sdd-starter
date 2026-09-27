@@ -55,15 +55,17 @@ The fixed folder structure (authoritative copy lives in `CLAUDE.md`):
 │   ├── skills/                   # feature-pipeline + openspec-* (hidden; Claude uses them)
 │   ├── agents/                   # react-reviewer, codebase-explorer
 │   └── commands/                 # /start, /feature, /finish — the only user commands
-├── .github/workflows/            # ci.yml, claude.yml, autopilot.yml
+├── .github/                      # workflows/ (ci, pr-size, claude, autopilot), dependabot.yml
 ├── e2e/                          # Playwright specs
 └── src/
     ├── main.tsx, App.tsx, store.ts
-    ├── routes/                   # pages
+    ├── routes/                   # routes.tsx (route table) + pages, error + loading screens
     ├── features/<domain>/        # feature-scoped: components, api.ts, store.ts, schema.ts, types.ts
     ├── components/ (ui/)         # shared UI + colocated tests
-    ├── hooks/  lib/  services/  stores/  types/  styles/
-    └── test/setup.ts
+    ├── lib/env.ts                # validated env (API URL, mocking)
+    ├── services/                 # api.ts (one RTK Query slice) + baseQuery.ts (auth, 401)
+    ├── hooks/  stores/  types/  styles/
+    └── test/                     # setup.ts, render.tsx (renderWithStore, renderRoute)
 ```
 
 ---
@@ -182,7 +184,7 @@ The files are the documentation — this playbook doesn't copy them (copies drif
 | Agent executors                        | `.github/workflows/claude.yml`, `autopilot.yml`        |
 | Who reviews what                       | `.github/CODEOWNERS`                                   |
 | What a PR must say                     | `.github/pull_request_template.md`                     |
-| Worked example (3 layers)              | `src/features/items/`, `src/routes/ItemsPage*`, `e2e/` |
+| Worked example (3 layers)              | `src/features/items/`, `src/routes/`, `e2e/`           |
 
 ---
 
