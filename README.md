@@ -4,7 +4,9 @@ A ready-to-run React starter with the full agentic, spec-driven pipeline pre-wir
 Vite + React + TypeScript, RTK Query, Zustand, React Hook Form + Zod, MSW, Vitest,
 Playwright, react-doctor, OpenSpec, and Claude Code skill/agents/commands/hooks.
 
-Everything in `PIPELINE.md` is already set up in this repo. Clone it, run install, and go.
+Everything in `PIPELINE.md` is already set up in this repo. It's a GitHub **template**:
+click "Use this template" to get your own repo (don't push project work back here), then
+run `/start` inside `claude` once to personalise it.
 
 ## Quick start
 
@@ -87,6 +89,15 @@ validated against the Zod schema at runtime, so a backend that drifts fails loud
 
 ## Replace the example
 
-The `items` feature is a demonstration. Delete `src/features/items/`, `src/routes/ItemsPage*`,
-its mock handlers and its `features.md` entry, then build your own with `/feature` — the
-structure and rules stay the same.
+The `items` feature is a demonstration. `/start` offers to remove it (the feature folder,
+`src/routes/ItemsPage*`, its mock handlers, the e2e smoke check and its `features.md` entry).
+To do it by hand, delete those, then build your own with `/feature` — the structure and rules
+stay the same.
+
+## Starting without the template
+
+To build the same setup in an empty folder instead: `npm create vite@latest <name> --
+--template react-ts`, then copy in `CLAUDE.md`, `PIPELINE.md`, `.claude/`, `.github/`,
+`openspec/config.yaml`, the configs (`vite`, `vitest`, `playwright`, `eslint`, `tsconfig`,
+`.prettierignore`, `.nvmrc`) and the `package.json` scripts + devDependencies from this repo,
+run `npx msw init public/ --save` and `npx openspec init --tools claude`, then `/start`.
