@@ -8,6 +8,19 @@ write it under "Open questions" rather than letting the agent guess.
 
 ---
 
+## App-wide (every page)
+
+**Behaviour**
+
+- Unknown URL: "Page not found" with a link to the home page.
+- A page crashes while rendering: "Something went wrong" with a link to reload the home page.
+- While a page's code is loading on first visit: "Loading…".
+- A request answered with 401 ends the session (the token is cleared).
+
+**Status:** shipped
+
+---
+
 ## Items (example — delete when you start your own)
 
 **Who / why:** A user keeps a short list of items and adds new ones.

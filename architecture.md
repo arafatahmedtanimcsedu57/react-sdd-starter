@@ -6,15 +6,18 @@ who made it and when, so a later reader knows it was deliberate.
 
 ## Decisions
 
-| Area                         | Decision                                      | Decided by / date |
-| ---------------------------- | --------------------------------------------- | ----------------- |
-| Framework                    | Vite 8 + React 19 + TypeScript 6 (strict)     | starter default   |
-| Styling                      | Tailwind CSS 4                                | starter default   |
-| UI component library         | None yet — hand-built components              | starter default   |
-| Server state / data fetching | RTK Query (fixed rule, see CLAUDE.md)         | starter default   |
-| Client / UI state            | Zustand (fixed rule)                          | starter default   |
-| Forms + validation           | React Hook Form + Zod (fixed rule)            | starter default   |
-| Routing                      | None yet — add react-router at first 2nd page | starter default   |
+| Area                         | Decision                                       | Decided by / date |
+| ---------------------------- | ---------------------------------------------- | ----------------- |
+| Framework                    | Vite 8 + React 19 + TypeScript 6 (strict)      | starter default   |
+| Styling                      | Tailwind CSS 4                                 | starter default   |
+| UI component library         | None yet — hand-built components               | starter default   |
+| Server state / data fetching | RTK Query (fixed rule, see CLAUDE.md)          | starter default   |
+| Client / UI state            | Zustand (fixed rule)                           | starter default   |
+| Forms + validation           | React Hook Form + Zod (fixed rule)             | starter default   |
+| Routing                      | React Router 7, lazy route per page            | starter default   |
+| Config / env                 | `VITE_*` validated by Zod in `src/lib/env.ts`  | starter default   |
+| Auth transport               | Bearer token, held in memory (Zustand)         | starter default   |
+| Quality floors               | Coverage ≥80% lines; ≤180 kB gzip per JS chunk | starter default   |
 
 Replace "starter default" with a name and date when your team confirms or changes a row.
 
@@ -25,6 +28,12 @@ Replace "starter default" with a name and date when your team confirms or change
 | items  | Zod schemas in `src/features/items/schema.ts` | 3 — frontend-first | MSW     |
 
 When a real backend ships, record its base URL and who owns the contract on that side.
+
+| Environment | `VITE_API_URL`          | Owner |
+| ----------- | ----------------------- | ----- |
+| local       | `/api` (mocks or proxy) |       |
+| staging     | _unset_                 |       |
+| production  | _unset_                 |       |
 
 ## Design (Claude Design)
 
@@ -52,4 +61,8 @@ components.
 Things the team hasn't settled yet. The agent asks about these instead of picking one.
 
 - UI component library (shadcn/ui is the natural fit with Tailwind).
-- Hosting / preview deploys (docs assume Vercel; nothing is wired yet).
+- Hosting / preview deploys (docs assume Vercel; nothing is wired yet). Whatever host is
+  chosen must serve `index.html` for unknown paths (SPA fallback) or deep links will 404.
+- Token refresh: `src/services/baseQuery.ts` signs out on 401; refresh-and-retry needs the
+  backend's refresh endpoint.
+- Error monitoring (e.g. Sentry) — `RouteError` logs to the console only.
