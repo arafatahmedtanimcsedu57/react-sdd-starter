@@ -69,7 +69,10 @@ The fixed folder structure (authoritative copy lives in `CLAUDE.md`):
 ## Phase 0 — One-time setup (per repo)
 
 This starter already has OpenSpec initialised, the MSW worker committed, and every tool
-pinned in `package.json`. What's left is the human-only setup on GitHub:
+pinned in `package.json`. Create your repo with "Use this template", then run `/start` in
+`claude`: it names the project, confirms styling + UI library, removes the example and
+drafts the first `features.md` / `architecture.md`. What's left is the human-only setup on
+GitHub:
 
 ```bash
 npm ci && npx playwright install chromium
