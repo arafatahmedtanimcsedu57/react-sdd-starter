@@ -18,13 +18,15 @@ Everything upstream of the PR can be automated aggressively, because nothing rea
 ```
 DEFINE            plan mode → features.md
                   decide tech + design tokens → architecture.md
-DESIGN            UI design skill → html/css mockup  (visual target)
-SPEC              OpenSpec propose → proposal / spec / tasks.md
-   ★ GATE 1       you review tasks.md              (cheapest place to fix intent)
-IMPLEMENT LOOP    (/clear) → /feature <change> → implement
+DESIGN            Claude Design: theme (/start) + a page per feature (/feature)
+                  you edit the design yourself on claude.ai
+SPEC              OpenSpec propose → proposal / spec / tasks.md   (/feature)
+   ★ GATE 1       /build: you approve design + tasks.md (cheapest place to fix intent)
+IMPLEMENT LOOP    /build → copy design into design/ → implement
+                  later design edits → /sync-ui → code catches up
    ↻ self-correct   after each edit: prettier + eslint + typecheck (errors fed back)
                      at turn end: related tests + react-doctor (errors fed back)
-                     npm run check at the done-gate
+                     npm run check + e2e (axe) + screenshots vs design at the done-gate
 VERIFY            CI: typecheck · lint · format · unit · e2e · react-doctor (changed)
 SHIP              Vercel preview deploy per PR
    ★ GATE 2       you review the PR + preview URL
@@ -102,8 +104,11 @@ a parallel spec.
 
 ## Phase 2 — Design (agent runs)
 
-Use the frontend UI design skill to generate an **HTML/CSS mockup** from `features.md` + the
-tokens in `architecture.md`. This is the visual target — the agent is blind to rendered UI.
+The UI lives in **Claude Design** (claude.ai): a Design System for the theme and one canvas
+with a page per feature, one screen per state. `/start` creates both; `/feature` reuses a
+feature's page or designs a new one in the same theme. You edit the design directly; `/build`
+re-reads it, and `/sync-ui` brings built code in line with later edits. Details:
+`.claude/skills/feature-pipeline/claude-design.md`.
 
 ## Phase 3 — Spec + Gate 1 (agent runs → you review)
 
@@ -228,10 +233,12 @@ A realistic week for one reviewer: ~5 min per Gate 1 brief, ~10–20 min per Gat
 
 ## Daily loop (the TL;DR)
 
-1. Plan-mode chat → update `features.md` / `architecture.md`.
-2. `/feature <idea>` → answer the Gate 1 brief → agent records `approved:` (Gate 1).
-3. `/clear` → `/feature <change>` → agent implements; hooks + react-doctor + tests self-correct.
+1. `/feature <idea>` → requirements, design (reused or new), spec.
+2. Edit the design on claude.ai until it looks right.
+3. `/build <change>` → answer the Gate 1 brief → agent implements; hooks + react-doctor +
+   tests + screenshots self-correct.
 4. PR opens → CI runs → preview deploy appears.
 5. **Review PR + preview** (Gate 2) → merge → `/finish <change>`.
+6. Changed a built screen's design later? `/sync-ui`.
 
 Two gates, everything else automated.

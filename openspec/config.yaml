@@ -15,6 +15,8 @@ rules:
     - 'Include a "Non-goals" section'
     - 'If this change depends on another, add a line "depends on: <change-name>"'
     - 'List any new npm dependency with a one-line justification; a new dependency makes the change at least medium risk'
+  design:
+    - 'For UI work, list the Claude Design artboards this change implements ("<slug>/<State>.dc.html") and the design page link from architecture.md'
   tasks:
     - 'First line: "Estimated reviewable lines: <n>". If n > 400, propose a split instead of one tasks.md'
     - 'Order tasks contract → logic → UI → wiring → e2e; each task names the file(s) it touches, placed per CLAUDE.md folder structure'

@@ -7,3 +7,5 @@ coverage
 blob-report
 *.tsbuildinfo
 .claude/settings.local.json
+# Local cache of the impeccable design plugin (per machine)
+.impeccable/

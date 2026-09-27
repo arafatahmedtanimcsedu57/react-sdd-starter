@@ -1,50 +1,45 @@
 ---
-description: Run one feature or change through the spec-driven loop in an existing repo. Lighter than /start — no bootstrap, fewer prompts, but still stops at both gates.
+description: Design and spec one feature or change — reuses its Claude Design page if it exists, otherwise designs it in the project's theme. Stops for you to edit the design; then run /build.
 ---
 
 # /feature
 
-Day-to-day driver for a single change in an already-set-up repo. Assumes OpenSpec (the
-`openspec-*` skills), tests, `CLAUDE.md`, and `.claude/settings.json` hooks already exist.
-Follow the `feature-pipeline` skill for step details; this command just runs the loop with
-minimal ceremony.
+Plans a single change: intent → design → spec. It does **not** write application code —
+`/build` does, after the human has looked at (and maybe edited) the design.
+Follow the `feature-pipeline` skill and `.claude/skills/feature-pipeline/claude-design.md`.
 
 Argument: `$ARGUMENTS` is the feature/change description. If empty, ask what to build.
-If it names an existing folder in `openspec/changes/` (e.g. after a `/clear`), resume that
-change: go to step 3 if its `tasks.md` is approved, otherwise to the Gate 1 brief in step 2.
+If it names an existing folder in `openspec/changes/`, show that change's status (design
+link, open questions, approved or not) and the next command to run. Stop.
 
 ## Behaviour
 
-- Move briskly. Don't ask permission for routine, reversible steps (writing spec files,
-  running tests, running react-doctor). DO confirm before irreversible or noisy actions
-  (installing packages, git push, opening a PR) — settings.json asks for these anyway.
-- Stop and ask on the triggers in `CLAUDE.md` → Human in the loop. One question, with
-  your recommended answer.
-- **Always stop at the two gates**, even in fast mode.
+- Move briskly on routine, reversible steps (spec files, design artboards). Confirm before
+  installs, pushes or PRs.
+- Stop and ask on the triggers in `CLAUDE.md` → Human in the loop. One question, with your
+  recommended answer.
 
 ## Steps
 
-1. **Define** — capture intent in `features.md` / `architecture.md` if the change needs it.
-   For small changes, a one-line note is fine. Use `codebase-explorer` if you need to find
-   where things live. If the change touches an API, **establish the contract first** (see
-   `CLAUDE.md` → API contracts): generate/hand-write from a spec, capture an informal contract
-   as Zod schemas, or — if the API isn't built yet — write the contract and mock it with MSW.
-2. **Spec + GATE 1** — run the `openspec-propose` skill. If the change will exceed 400 reviewable
-   lines, split it into smaller changes (one per PR; see the skill). Send the short Gate 1
-   brief from the skill (risk, size, decisions needed with defaults) and STOP. On explicit
-   approval, record `approved: <name>, <date>` in `tasks.md`.
-   For a **low**-risk change the human may say "skip Gate 1" — then note that in the PR.
-3. **Implement** — if the conversation is long, ask the human to `/clear` and run
-   `/feature <change-name>`; otherwise run the `openspec-apply-change` skill directly. Implement task-by-task with tests.
-   Hooks self-correct on each edit and at turn end. Run `react-reviewer` after a chunk.
-4. **Verify** — must pass before done: `npm run check` (+ `npm run test:e2e` for flows).
-5. **Ship + GATE 2** — open a PR (never merge) using `.github/pull_request_template.md`,
-   filling in "Review carefully", "Decisions I made without asking" and "Safe to skim".
-   Report CI status + preview URL (if deploys are wired), then STOP for review. After
-   merge, tell the human to run `/finish`, and propose `CLAUDE.md` rules for repeated corrections.
+1. **Define** — capture intent in `features.md` (behaviour, states, edge cases, open
+   questions). For small changes, a one-line note is fine. If the change touches an API,
+   **establish the contract first** (`CLAUDE.md` → API contracts).
+2. **Design check** — read the project canvas (link in `architecture.md` → Design) and look
+   for this feature's page.
+   - **Page exists** → use it as is. List its artboards.
+   - **No page** → design it on the canvas: a new page, one artboard per state per width,
+     using the installed design system and the look of the existing pages.
+   - **No UI in this change** (pure logic, API, config) → skip design and say so.
+   - **No canvas yet** (setup skipped it) → ask whether to create it now (default yes).
+3. **Spec** — run the `openspec-propose` skill. `design.md` lists the artboards the change
+   implements (`<slug>/<State>.dc.html`). If it will exceed 400 reviewable lines, split it
+   (see the skill). `tasks.md` ends with `approved: <pending>`.
+4. **Hand over** — send, then STOP:
 
-## Reminder
-
-Two gates: `tasks.md` review before implementing (skippable only for low-risk changes, and
-only when the human says so), PR review before merge (never skippable). Everything between
-them can move fast.
+   ```
+   Designed + specced — <change-name>   Risk: <tier>   ~<n> reviewable lines
+   Design: <canvas link> → page "<feature>" (<k> screens)
+   Open decisions (my default in brackets, also on the canvas as notes):
+     1. <question> [<default>]
+   Edit the design on claude.ai if you want, then run `/build <change-name>`.
+   ```

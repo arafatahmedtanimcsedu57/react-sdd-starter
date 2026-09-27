@@ -1,5 +1,5 @@
 ---
-description: Set up a new project from this template (run once) — asks questions and requests permission before every step, then hands off to /feature.
+description: Set up a new project from this template (run once) — names it, picks styling + UI library, writes the first requirements, and creates its Claude Design theme and screens. Asks before every step.
 ---
 
 # /start
@@ -68,7 +68,7 @@ Ask first (default **yes, remove it**). If yes:
   through the Zod schema.
 - `src/stores/useUiStore.ts` → reset to an empty example store (keep the file; the test
   setup resets it between tests).
-- `e2e/smoke.spec.ts` → assert the placeholder heading renders.
+- `e2e/smoke.spec.ts` → assert the placeholder heading renders; keep the axe test.
 - `features.md` → remove the Items entry; `architecture.md` → remove the `items` row from
   API contract.
 - Leave `src/lib/math.ts` (the unit-test example) unless the user asks.
@@ -82,17 +82,36 @@ Ask first (default **yes, remove it**). If yes:
 - Ask the API situation and record it under API contract (see `CLAUDE.md` → API contracts):
   a) OpenAPI spec exists (path/URL — offer `npm run gen:api`) b) informal contract
   (Postman / sample JSON) c) frontend-first, no API yet (Zod + MSW).
-- Ask for design tokens (primary colour, body font, radius) or leave them `_unset_`.
 - Ask hosting / preview deploys (Vercel, Netlify, other, not yet) and record it. Don't wire
   a deploy workflow here — CD is project-specific; offer it as a later `/feature`.
 
-## Step 5 — Commit + PR
+## Step 5 — Design (Claude Design)
+
+Follow `.claude/skills/feature-pipeline/claude-design.md`. Needs this session signed in to
+claude.ai; if the Artifact tool isn't available, say so, skip this step, and note in
+`architecture.md` → Design that it's pending.
+
+1. **Theme.** Ask for the look: primary colour, fonts (display + body), corner radius, and
+   the breakpoints to design for (default mobile 390 + desktop 1280). Offer one concrete
+   proposal as the default; the human can say "you pick".
+2. **Design System.** Create it with those tokens. Write its tokens into the styling layer
+   (Tailwind 4: the `@theme` block in `src/styles/index.css`) and the table in
+   `architecture.md` → Design tokens.
+3. **Canvas.** Create the project canvas (title = project name), install the design system,
+   and add **one page per feature** in `features.md`, one artboard per state per width.
+   Put each open decision on its page as an orange sticky note.
+4. Record both links and the breakpoints in `architecture.md` → Design.
+5. Tell the human: "Open the design, change anything you like directly on the canvas. When
+   a feature looks right, run `/build <feature>`." (Its spec is written by `/feature
+<feature>` first — say which to run for each feature.)
+
+## Step 6 — Commit + PR
 
 Commit the setup on `chore/project-setup` and, after confirming, push and open a PR. This
 PR is mostly deletions and config — suggest the human add the `large-pr-approved` label if
 the size check fails.
 
-## Step 6 — GitHub checklist (human-only — list it, don't do it)
+## Step 7 — GitHub checklist (human-only — list it, don't do it)
 
 Print this checklist for the human; the agent can't and shouldn't do these:
 
@@ -104,5 +123,6 @@ Print this checklist for the human; the agent can't and shouldn't do these:
 
 ## Hand off
 
-Summarise what was set up (name, styling, UI library, API case, first features), then say:
-"Merge the setup PR, then run `/feature <first feature>`." Stop.
+Summarise what was set up (name, styling, UI library, API case, first features, design
+links), then say: "Merge the setup PR. Edit the design if you like, then for each feature
+run `/feature <feature>` (it reuses the page already designed) and `/build <change>`." Stop.

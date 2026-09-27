@@ -21,12 +21,21 @@ work around them.
 
 ## Slash commands (the human's only interface)
 
-The human uses exactly three: `/start` (once, set up a project from this template),
-`/feature <idea | change-name>` (build or resume a change), `/finish <change-name>` (after
-merge: archive the spec). Every other skill (`feature-pipeline`, `openspec-*`) is internal —
+The human uses exactly five: `/start` (once: set up the project + its Claude Design),
+`/feature <idea>` (design + spec, then stop so they can edit the design), `/build
+<change-name>` (Gate 1 → code → PR), `/sync-ui [feature]` (code catches up with design
+edits), `/finish <change-name>` (after merge: archive the spec). Every other skill (`feature-pipeline`, `openspec-*`) is internal —
 you invoke it; never tell the human to run it. When a vendored OpenSpec skill says "run
-`/opsx:propose` / `/opsx:apply`", say `/feature <change-name>`; for `/opsx:archive` or
+`/opsx:propose`", say `/feature`; for `/opsx:apply`, say `/build <change-name>`; for `/opsx:archive` or
 `/opsx:sync`, say `/finish <change-name>`.
+
+## UI design (Claude Design)
+
+- Claude Design on claude.ai is the source of truth for the UI; links in `architecture.md`
+  → Design. Rules: `.claude/skills/feature-pipeline/claude-design.md`.
+- `design/` is the copy of the design as last built. Only `/build` and `/sync-ui` write it;
+  never hand-edit it.
+- Colours, fonts and radii come from design tokens, never hex values copied into components.
 
 ## Human in the loop
 
@@ -103,6 +112,7 @@ src/
 ├── styles/               # global styles / tokens
 └── test/setup.ts         # test setup
 e2e/                      # Playwright specs
+design/                   # copy of the Claude Design as last built (written by /build, /sync-ui)
 ```
 
 Placement rules:

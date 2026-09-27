@@ -6,8 +6,9 @@ description: >-
   React (Vite + TypeScript) app. Use this skill whenever the user asks to build, add,
   implement, change, refactor, or fix a feature, component, page, screen, form, or bug —
   even if they never say the word "pipeline" or "spec". It enforces the full loop:
-  plan -> features.md/architecture.md -> OpenSpec propose -> HUMAN review of tasks.md ->
-  implement per spec -> self-correct with hooks + tests + react-doctor -> open a PR.
+  plan -> features.md/architecture.md -> Claude Design -> OpenSpec propose -> HUMAN review
+  of design + tasks.md -> implement per spec and design -> self-correct with hooks + tests +
+  react-doctor + screenshots -> open a PR.
   Always follow these steps for any non-trivial feature or change; never skip the
   tasks.md review gate or the definition-of-done checks.
 ---
@@ -26,10 +27,14 @@ or pages, non-trivial refactors, and bug fixes that touch behaviour.
 **When NOT to use:** trivial one-liners (a typo, a copy tweak, a single style value). Just
 make those directly — don't spin up the whole loop.
 
+The human drives it with five commands: `/start` (once), `/feature` (design + spec),
+`/build` (Gate 1 → code → PR), `/sync-ui` (design edits → code), `/finish` (after merge).
+Claude Design is the UI source of truth — see `claude-design.md` in this folder.
+
 ## The two human gates (never skip)
 
-1. **Review `tasks.md`** after OpenSpec propose, BEFORE implementing. Stop and let the
-   human approve. This is the cheapest place to fix wrong intent.
+1. **Review the design + `tasks.md`** (`/build` asks) BEFORE implementing. Stop and let the
+   human approve. This is the cheapest place to fix wrong intent or a wrong look.
 2. **Review the PR + preview deploy**, BEFORE merge. You open the PR; you do not merge it.
 
 If the human is not available to clear a gate, stop and wait. Do not proceed past a gate
@@ -61,11 +66,13 @@ correction. How much attention a change needs depends on its **risk tier** (see
   stub) and stand up MSW mocks so the UI never blocks on the backend. Record the source in
   `architecture.md`.
 
-### 2. Design (optional, for UI work)
+### 2. Design (every change with UI)
 
-- For new UI, use the frontend UI design skill to generate an HTML/CSS mockup from
-  `features.md` + the tokens in `architecture.md`. This is the visual target to match,
-  since you cannot see the rendered result yourself.
+- The design lives in Claude Design: one project canvas, one page per feature, themed by
+  the project's Design System. Follow `claude-design.md` in this folder.
+- The feature has a page → use it. No page → design it in the existing theme and look.
+- The human may edit the design directly on claude.ai at any time. Always re-read the live
+  canvas before building; never build from memory of an earlier version.
 
 ### 3. Spec + GATE 1
 
@@ -82,6 +89,9 @@ correction. How much attention a change needs depends on its **risk tier** (see
   2. UI: components + component tests
   3. wiring: route/page + e2e
      Note each change's dependencies in its `proposal.md` ("depends on: <change-name>").
+- `/feature` stops here so the human can edit the design. **Gate 1 happens in `/build`**,
+  after re-reading the design (the brief below plus a `Design:` link and a line on the
+  human's design edits).
 - **STOP at Gate 1.** Don't paste the whole `tasks.md`. Send a short brief:
 
   ```
@@ -101,12 +111,14 @@ correction. How much attention a change needs depends on its **risk tier** (see
 - **Async option** (teams, or when the human isn't in this session): commit the change
   folder on a branch and open a **spec PR** (only `openspec/` files). CODEOWNERS routes it;
   the reviewer adds the `approved:` line in their review. Once merged, the change is eligible
-  for `/feature <change-name>` or autopilot.
+  for `/build <change-name>` or autopilot (which builds from the `design/` copy).
 
 ### 4. Implement loop (self-correcting)
 
 - Fresh context helps: you can't clear it yourself, so if the conversation is long, ask the
-  human to run `/clear` and then `/feature <change-name>`. If it's short, just continue.
+  human to run `/clear` and then `/build <change-name>`. If it's short, just continue.
+- Before coding, copy the approved design page into `design/` (see `claude-design.md`) and
+  sync any token changes into the styling layer. Match the artboards; use tokens, not hex.
 - Run OpenSpec **apply** (the `openspec-apply-change` skill). It refuses to start while
   `tasks.md` still says `approved: <pending>`. Work down the checklist one item at a time.
 - Hooks self-correct as you go: after every edit, prettier + eslint + typecheck run on the
@@ -129,6 +141,10 @@ You may not consider a task complete until this passes:
 npm run check        # typecheck + lint + format:check + test + doctor
 npm run test:e2e     # if the change touches a user flow
 ```
+
+Then the **visual self-check**: Playwright screenshots of each state at each design width,
+compared with the artboards (`claude-design.md`). The e2e run includes axe accessibility
+checks.
 
 If any step fails, fix it and re-run. This is the self-correct loop — do not stop on red.
 If the same failure survives 3 honest attempts, stop and tell the human what you tried and
@@ -162,8 +178,9 @@ Three layers, all via Vitest / React Testing Library / Playwright:
 - **Unit** — pure logic (e.g. `src/lib/*.ts`). Fast, deterministic, highest value.
 - **Component** — render + user interaction via `@testing-library/user-event`. Query by
   label and role (not by class) so the test also verifies accessibility.
-- **E2E** — Playwright for the key user flow. This is what verifies the rendered UI, since
-  you cannot see it. Assert on visible text and roles.
+- **E2E** — Playwright for the key user flow. Assert on visible text and roles, and run axe
+  (`@axe-core/playwright`) on each screen — no violations.
+- **Visual** — screenshots per state and width, compared with the Claude Design artboards.
 - **Mocking** — MSW is the default mock layer for component + e2e tests, with handlers derived
   from the API contract; keep fixtures valid against the Zod schemas.
 
