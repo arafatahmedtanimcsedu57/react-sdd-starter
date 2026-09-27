@@ -1,10 +1,10 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { newItemSchema, type NewItem } from '../schema'
-import { useAddItemMutation } from '../../../services/api'
+import { useAddItemMutation } from '../api'
 
 export function ItemForm() {
-  const [addItem, { isLoading }] = useAddItemMutation()
+  const [addItem, { isLoading, isError }] = useAddItemMutation()
   const {
     register,
     handleSubmit,
@@ -13,8 +13,12 @@ export function ItemForm() {
   } = useForm<NewItem>({ resolver: zodResolver(newItemSchema) })
 
   async function onSubmit(values: NewItem) {
-    await addItem(values).unwrap()
-    reset()
+    try {
+      await addItem(values).unwrap()
+      reset()
+    } catch {
+      // isError renders the message below; keep the typed value so the user can retry.
+    }
   }
 
   return (
@@ -22,6 +26,7 @@ export function ItemForm() {
       <label htmlFor="name">Name</label>
       <input id="name" className="border p-1" {...register('name')} />
       {errors.name && <p role="alert">{errors.name.message}</p>}
+      {isError && <p role="alert">Could not save the item. Try again.</p>}
       <button type="submit" disabled={isLoading}>
         Save
       </button>
