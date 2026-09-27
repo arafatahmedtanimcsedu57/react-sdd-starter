@@ -9,5 +9,20 @@ export default defineConfig({
     globals: true,
     setupFiles: './src/test/setup.ts',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/main.tsx',
+        'src/App.tsx',
+        'src/mocks/**',
+        'src/test/**',
+        'src/services/generatedApi.ts',
+        'src/**/*.d.ts',
+      ],
+      // The floor, not the goal. Raise these as the suite grows; never lower them to pass.
+      thresholds: { lines: 80, functions: 80, branches: 75, statements: 80 },
+    },
   },
 })
