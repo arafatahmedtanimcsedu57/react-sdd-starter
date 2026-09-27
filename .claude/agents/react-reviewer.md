@@ -42,7 +42,7 @@ not absolute verdicts — flag likely false positives as such rather than demand
 
 ## Output format
 
-One line per finding, terse (format from caveman-review):
+One line per finding, terse:
 `<file>:L<line>: <severity> <problem>. <fix>.`
 
 Severity: `🔴 bug:` broken behaviour · `🟡 risk:` works but fragile · `🔵 nit:` style ·

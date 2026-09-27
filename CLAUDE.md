@@ -19,6 +19,15 @@ Hooks already run prettier + eslint + typecheck after every edit, and related te
 react-doctor before you finish a turn. Their errors come back to you — fix them, don't
 work around them.
 
+## Slash commands (the human's only interface)
+
+The human uses exactly three: `/start` (once, set up a project from this template),
+`/feature <idea | change-name>` (build or resume a change), `/finish <change-name>` (after
+merge: archive the spec). Every other skill (`feature-pipeline`, `openspec-*`) is internal —
+you invoke it; never tell the human to run it. When a vendored OpenSpec skill says "run
+`/opsx:propose` / `/opsx:apply`", say `/feature <change-name>`; for `/opsx:archive` or
+`/opsx:sync`, say `/finish <change-name>`.
+
 ## Human in the loop
 
 A person owns intent, decisions and merges. You own execution. Act, but know when to stop.
