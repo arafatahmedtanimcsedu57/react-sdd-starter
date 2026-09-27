@@ -1,0 +1,16 @@
+# Who gets asked to review what. Replace @arafatahmedtanimcsedu57 with real people/teams.
+# With branch protection "Require review from Code Owners", these reviews are mandatory.
+
+*                                   @arafatahmedtanimcsedu57
+
+# Gate 1 — specs are reviewed like code. Approving a spec PR is approving tasks.md.
+/openspec/                          @arafatahmedtanimcsedu57
+
+# The contract: a change here can break the backend handshake.
+/src/features/*/schema.ts           @arafatahmedtanimcsedu57
+/src/services/                      @arafatahmedtanimcsedu57
+
+# The rules the agent follows, and the machines that enforce them.
+/CLAUDE.md                          @arafatahmedtanimcsedu57
+/.claude/                           @arafatahmedtanimcsedu57
+/.github/                           @arafatahmedtanimcsedu57

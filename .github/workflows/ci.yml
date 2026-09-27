@@ -4,24 +4,39 @@ on:
   push:
     branches: [main, master]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # react-doctor --scope changed needs base branch history
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run format:check
       - run: npm run test
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
-      - name: React health gate
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+      - name: React health gate (new issues only)
         env:
           BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
-        run: npx -y react-doctor@latest . --diff "origin/$BASE_REF" --score
+        run: npx react-doctor . --scope changed --base "origin/$BASE_REF" --no-score
