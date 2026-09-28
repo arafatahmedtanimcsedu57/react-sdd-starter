@@ -5,7 +5,7 @@ design in Claude Design, and approve the plan; Claude Code writes the code and t
 opens a PR. You review it and merge.
 
 **Stack:** Vite · React 19 · TypeScript (strict) · React Router 7 · RTK Query · Zustand ·
-React Hook Form + Zod · Tailwind 4 · MSW · Vitest · Playwright · OpenSpec.
+React Hook Form + Zod · Tailwind 4 · MSW · Vitest · Playwright · OpenSpec · Sentry.
 
 ---
 
@@ -39,6 +39,8 @@ screens.
 3. Put real people or teams in `.github/CODEOWNERS`.
 4. Optional: preview deploys per PR, and the repo variable `AUTOPILOT_ENABLED=true` for
    nightly builds of approved specs.
+5. Before the first production deploy: set `VITE_SENTRY_DSN` on your host so errors are
+   reported (see [6. Error tracking](#6-error-tracking-sentry)).
 
 ## 3. Build a feature: the daily loop
 
@@ -107,7 +109,41 @@ a backend that drifts from the contract fails loudly.
 - **OpenAPI spec available?** Point `openapi-config.ts` at it and run `npm run gen:api`.
   The typed endpoints and hooks go into the same API slice.
 
-## 6. What must pass before a PR can merge
+## 6. Error tracking (Sentry)
+
+Production errors go to [Sentry](https://sentry.io). Tracking is **off until you set a DSN**,
+so local dev and tests never send anything. The free Developer plan (1 user, 5,000 errors a
+month) is enough to start. [GlitchTip](https://glitchtip.com) accepts the same SDK: point the
+DSN at it instead, with no code change.
+
+**1. Get a DSN.** Create a Sentry project (platform: React), then copy the DSN from
+**Project Settings → Client Keys (DSN)**. It looks like
+`https://abc123@o456.ingest.sentry.io/789`.
+
+**2. Set it where the production build runs**, usually your host (Vercel: Project → Settings
+→ Environment Variables; Netlify: Site configuration → Environment variables). Vite writes
+`VITE_*` values into the bundle **at build time**, so **redeploy** after setting it.
+
+| Variable                         | Where                             | Needed for                                                       |
+| -------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
+| `VITE_SENTRY_DSN`                | Host: Production (+ Preview)      | Turning error reporting on                                       |
+| `VITE_SENTRY_TRACES_SAMPLE_RATE` | Host (optional)                   | Share of page loads traced, 0–1 (default 0.1; `0` = errors only) |
+| `SENTRY_AUTH_TOKEN` 🔒           | Host only, never in `.env` or git | Uploading source maps for readable stack traces                  |
+| `SENTRY_ORG`, `SENTRY_PROJECT`   | Host, next to the token           | Required once the token is set, or the build fails               |
+
+The DSN isn't a secret (it ships in the browser bundle). The auth token **is** one: create it
+under Sentry → Settings → Auth Tokens. Source maps are uploaded and then deleted from `dist/`,
+so they're never served. CI doesn't need any of these; it runs tests, not the deploy.
+
+**3. Try it locally (optional).** Put the DSN in `.env`, restart `npm run dev`, and throw an
+error. It shows up in Sentry with environment `development`. Clear it afterwards so your dev
+errors don't use up the monthly quota.
+
+**What gets reported:** crashes, unhandled promise rejections, and route errors from 5xx
+responses (expected 4xx ones like "not found" are skipped). To report an error you caught
+yourself, call `reportError(error)` from `src/lib/monitoring.ts`.
+
+## 7. What must pass before a PR can merge
 
 Claude runs these while it works (via hooks), and CI runs them again on every PR:
 
@@ -123,7 +159,7 @@ Claude runs these while it works (via hooks), and CI runs them again on every PR
 Dependabot opens grouped dependency-update PRs every week, and each one goes through the
 same checks.
 
-## 7. Scripts
+## 8. Scripts
 
 | Script                  | What it does                                                  |
 | ----------------------- | ------------------------------------------------------------- |
@@ -138,7 +174,7 @@ same checks.
 | `npm run format`        | Prettier (write)                                              |
 | `npm run gen:api`       | Generate the API layer from an OpenAPI spec                   |
 
-## 8. Project map
+## 9. Project map
 
 | Path                  | What it is                                                             |
 | --------------------- | ---------------------------------------------------------------------- |

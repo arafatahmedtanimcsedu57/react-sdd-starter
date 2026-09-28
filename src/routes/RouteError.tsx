@@ -1,10 +1,17 @@
+import { useEffect } from 'react'
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router'
+import { reportError } from '../lib/monitoring'
 
 // The app's error boundary: unknown URLs and any error thrown while rendering a page.
 export function RouteError() {
   const error = useRouteError()
   const notFound = isRouteErrorResponse(error) && error.status === 404
-  if (!notFound) console.error(error)
+
+  useEffect(() => {
+    // 4xx responses are expected (not found, signed out); report crashes and server errors.
+    if (!isRouteErrorResponse(error)) void reportError(error)
+    else if (error.status >= 500) void reportError(new Error(`${error.status} ${error.statusText}`))
+  }, [error])
 
   return (
     <main className="mx-auto max-w-md p-6">
