@@ -37,3 +37,4 @@ jobs:
           claude_args: >-
             --max-turns 40
             --allowedTools "Bash(npm run:*),Bash(npx vitest:*),Bash(git:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*)"
+            --disallowedTools "Bash(gh pr merge:*),Bash(gh api:*),Bash(git push --force:*),Bash(git push -f:*),Bash(git push origin main:*),Bash(git push origin master:*)"

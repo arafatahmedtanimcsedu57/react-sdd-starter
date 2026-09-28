@@ -51,7 +51,7 @@ screens.
 **On GitHub, a repo admin does this once** (Claude can't and shouldn't):
 
 1. In `claude`, run `/install-github-app` (adds the `ANTHROPIC_API_KEY` secret).
-2. Branch protection on the default branch: require the `CI` and `PR size` checks, 1
+2. Branch protection on the default branch: require the `CI` (incl. `approvals`) and `PR size` checks, 1
    review, and Code Owner review.
 3. Put real people or teams in `.github/CODEOWNERS`.
 4. Optional: preview deploys per PR, and the repo variable `AUTOPILOT_ENABLED=true` for

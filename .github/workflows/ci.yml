@@ -12,6 +12,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Gate 1 is only real if a person wrote the `approved:` line. Fail any PR where a bot
+  # (autopilot, @claude) opened it or authored the commit that adds one. A human's local
+  # Claude session writing the line after they said yes is fine: the commit is theirs.
+  approvals:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Only a human adds an approved line
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+        run: |
+          range="origin/$BASE_REF...HEAD"
+          tasks='openspec/changes/*/tasks.md'
+          added=$(git diff "$range" -- "$tasks" | grep -E '^\+[[:space:]]*approved:' | grep -v '<pending>' || true)
+          [ -z "$added" ] && { echo "No approval lines added."; exit 0; }
+          echo "Approval lines added:"; echo "$added"
+          if [ "$PR_AUTHOR_TYPE" = "Bot" ] || [[ "$HEAD_REF" == autopilot/* ]]; then
+            echo "::error::PR by $PR_AUTHOR ($HEAD_REF) adds an approved: line. Only a human approves tasks.md."
+            exit 1
+          fi
+          bots=$(git log --format='%h %an <%ae>' -G'^[[:space:]]*approved:' "$range" -- "$tasks" \
+            | grep -Ei '\[bot\]|noreply@anthropic\.com' || true)
+          if [ -n "$bots" ]; then
+            echo "::error::A bot commit touches an approved: line:"; echo "$bots"
+            exit 1
+          fi
+
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20

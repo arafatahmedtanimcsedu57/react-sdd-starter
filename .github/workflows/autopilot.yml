@@ -45,8 +45,8 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: >-
             --max-turns 80
-            --allowedTools "Edit,Write,Read,Glob,Grep,Bash(npm run:*),Bash(npx vitest:*),Bash(npx openspec:*),Bash(git:*),Bash(gh pr list:*),Bash(gh pr create:*),Bash(gh issue create:*),Bash(gh issue list:*)"
-            --disallowedTools "Bash(gh pr merge:*),Bash(npm install:*),Bash(npm i:*)"
+            --allowedTools "Edit,Write,Read,Glob,Grep,Bash(npm run:*),Bash(npx vitest:*),Bash(npx openspec:*),Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git fetch:*),Bash(git rev-parse:*),Bash(git switch:*),Bash(git checkout -b autopilot/*),Bash(git add:*),Bash(git commit:*),Bash(git push -u origin autopilot/*),Bash(git push origin autopilot/*),Bash(gh pr list:*),Bash(gh pr create:*),Bash(gh issue create:*),Bash(gh issue list:*)"
+            --disallowedTools "Bash(gh pr merge:*),Bash(gh api:*),Bash(git push --force:*),Bash(git push -f:*),Bash(npm install:*),Bash(npm i:*)"
           prompt: |
             Implement exactly ONE OpenSpec change. Never batch several changes into one PR.
             Requested change (may be empty): "${{ github.event.inputs.change }}"
