@@ -42,7 +42,7 @@ screens.
 
 ## 3. Build a feature: the daily loop
 
-You only ever type these five commands in `claude`:
+You only ever type these six commands in `claude`:
 
 ```text
 /feature <idea>  →  edit the design  →  /build <change>  →  review + merge PR  →  /finish <change>
@@ -56,6 +56,7 @@ You only ever type these five commands in `claude`:
 | Review the PR        | **Gate 2:** read "Review carefully", click the preview, merge | Fixes anything you comment on (mention `@claude` in the PR)            |
 | `/finish <change>`   | Run it after merging                                          | Archives the spec into `openspec/specs/` and marks the feature shipped |
 | `/sync-ui [feature]` | Run it after you edit an already-built design                 | Updates the code to match; sends behaviour changes to `/build`         |
+| `/fix <bug>`         | Describe the bug and how to reproduce it; review the PR       | Writes a failing test, makes the smallest fix, opens a PR              |
 
 You can also just describe what you want in plain words; Claude follows the same steps.
 `PIPELINE.md` → "Human involvement" explains what each gate asks of you.

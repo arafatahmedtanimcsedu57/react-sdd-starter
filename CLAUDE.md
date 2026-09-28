@@ -22,10 +22,11 @@ work around them.
 
 ## Slash commands (the human's only interface)
 
-The human uses exactly five: `/start` (once: set up the project + its Claude Design),
+The human uses exactly six: `/start` (once: set up the project + its Claude Design),
 `/feature <idea>` (design + spec, then stop so they can edit the design), `/build
 <change-name>` (Gate 1 → code → PR), `/sync-ui [feature]` (code catches up with design
-edits), `/finish <change-name>` (after merge: archive the spec). Every other skill (`feature-pipeline`, `openspec-*`) is internal —
+edits), `/finish <change-name>` (after merge: archive the spec), `/fix <bug>` (a bug in
+shipped behaviour: failing test → fix → PR, no design or spec step). Every other skill (`feature-pipeline`, `openspec-*`) is internal —
 you invoke it; never tell the human to run it. When a vendored OpenSpec skill says "run
 `/opsx:propose`", say `/feature`; for `/opsx:apply`, say `/build <change-name>`; for `/opsx:archive` or
 `/opsx:sync`, say `/finish <change-name>`.
