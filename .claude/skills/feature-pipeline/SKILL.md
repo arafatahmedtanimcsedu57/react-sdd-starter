@@ -10,7 +10,8 @@ description: >-
   of design + tasks.md -> implement per spec and design -> self-correct with hooks + tests +
   react-doctor + screenshots -> open a PR.
   Always follow these steps for any non-trivial feature or change; never skip the
-  tasks.md review gate or the definition-of-done checks.
+  tasks.md review gate or the definition-of-done checks. A bug in already-shipped,
+  specified behaviour takes the lighter /fix lane instead (see "When to use").
 ---
 
 # Feature pipeline
@@ -22,13 +23,19 @@ gates you must never skip.
 ## When to use
 
 Use this for any change that is more than a one-line edit: new features, new components
-or pages, non-trivial refactors, and bug fixes that touch behaviour.
+or pages, non-trivial refactors, and bug fixes that change specified behaviour.
+
+**Bugs go to `/fix` first.** A bug in behaviour that is already specified and shipped —
+no new UI, no contract change, no new dependency, ~100 lines or fewer — takes the light
+lane in `.claude/commands/fix.md`: failing test → minimal fix → PR (Gate 2 only). Use this
+pipeline only when the bug turns out to need a spec or design change.
 
 **When NOT to use:** trivial one-liners (a typo, a copy tweak, a single style value). Just
 make those directly — don't spin up the whole loop.
 
-The human drives it with five commands: `/start` (once), `/feature` (design + spec),
-`/build` (Gate 1 → code → PR), `/sync-ui` (design edits → code), `/finish` (after merge).
+The human drives it with six commands: `/start` (once), `/feature` (design + spec),
+`/build` (Gate 1 → code → PR), `/sync-ui` (design edits → code), `/finish` (after merge),
+and `/fix` (bug in shipped behaviour → test-first fix → PR).
 Claude Design is the UI source of truth — see `claude-design.md` in this folder.
 
 ## The two human gates (never skip)

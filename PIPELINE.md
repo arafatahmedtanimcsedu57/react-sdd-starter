@@ -54,7 +54,7 @@ The fixed folder structure (authoritative copy lives in `CLAUDE.md`):
 │   ├── settings.json             # PostToolUse hooks (prettier + typecheck)
 │   ├── skills/                   # feature-pipeline + openspec-* (hidden; Claude uses them)
 │   ├── agents/                   # react-reviewer, codebase-explorer
-│   └── commands/                 # /start, /feature, /finish — the only user commands
+│   └── commands/                 # /start, /feature, /build, /sync-ui, /finish, /fix
 ├── .github/                      # workflows/ (ci, pr-size, claude, autopilot), dependabot.yml
 ├── e2e/                          # Playwright specs
 └── src/
@@ -179,7 +179,7 @@ The files are the documentation — this playbook doesn't copy them (copies drif
 | Turn-end self-correction               | `.claude/hooks/stop-check.sh` (related tests + doctor) |
 | What the agent may not do              | `.claude/settings.json` → `permissions`                |
 | Workflow for the agent                 | `.claude/skills/feature-pipeline/SKILL.md`             |
-| User commands                          | `.claude/commands/` (`/start`, `/feature`, `/finish`)  |
+| User commands                          | `.claude/commands/` (six commands)                     |
 | Enforcement gate                       | `.github/workflows/ci.yml`, `pr-size.yml`              |
 | Agent executors                        | `.github/workflows/claude.yml`, `autopilot.yml`        |
 | Who reviews what                       | `.github/CODEOWNERS`                                   |
@@ -242,5 +242,6 @@ A realistic week for one reviewer: ~5 min per Gate 1 brief, ~10–20 min per Gat
 4. PR opens → CI runs → preview deploy appears.
 5. **Review PR + preview** (Gate 2) → merge → `/finish <change>`.
 6. Changed a built screen's design later? `/sync-ui`.
+7. Bug in something already shipped? `/fix <bug>` → failing test → fix → PR (Gate 2 only).
 
 Two gates, everything else automated.
