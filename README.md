@@ -4,14 +4,29 @@ A React template where **you decide and Claude builds**. You describe a feature,
 design in Claude Design, and approve the plan; Claude Code writes the code and tests, then
 opens a PR. You review it and merge.
 
-**Stack:** Vite · React 19 · TypeScript (strict) · React Router 7 · RTK Query · Zustand ·
-React Hook Form + Zod · Tailwind 4 · MSW · Vitest · Playwright · OpenSpec · Sentry.
+**Stack:** Vite 8 · React 19 · TypeScript 6 (strict) · React Router 8 · RTK Query · Zustand 5 ·
+React Hook Form + Zod 4 · Tailwind 4 · MSW 2 · Vitest 5 · Playwright · OpenSpec · Sentry.
+
+**Versions** (installed from `package-lock.json`):
+
+| Area       | Package                                                                              |
+| ---------- | ------------------------------------------------------------------------------------ |
+| Runtime    | Node 24 (`.nvmrc`), npm 11                                                           |
+| UI         | react / react-dom 19.3, react-router 8.4, tailwindcss 4.3                            |
+| Data       | @reduxjs/toolkit 2.12, react-redux 9.3, zustand 5.0, zod 4.6                         |
+| Forms      | react-hook-form 7.89, @hookform/resolvers 5.9                                        |
+| Build      | vite 8.3, @vitejs/plugin-react 6.1, typescript 6.0                                   |
+| Tests      | vitest 5.0, jsdom 30.1, @testing-library/react 16.3, msw 2.15, @playwright/test 1.63 |
+| Lint       | eslint 10.11, typescript-eslint 8.70, prettier 3.9, react-doctor 0.9                 |
+| Monitoring | @sentry/react 11.0, @sentry/vite-plugin 5.4                                          |
+| Workflow   | @fission-ai/openspec 1.13                                                            |
 
 ---
 
 ## 1. What you need
 
-- **Node 22+** (`.nvmrc` pins 24, so run `nvm use`)
+- **Node 22.22.2+ or 24.15.0+** (jsdom 30 and React Router 8 need it). `.nvmrc` pins 24, so
+  run `nvm install && nvm use` to get the latest 24.x.
 - **Claude Code**, signed in to claude.ai (`claude` in your terminal)
 - **Claude Design** access on the same claude.ai account (the UI is designed there)
 - A **GitHub** repo made from this template ("Use this template"). Don't push project

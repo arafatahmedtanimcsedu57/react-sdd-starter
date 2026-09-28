@@ -14,7 +14,7 @@ who made it and when, so a later reader knows it was deliberate.
 | Server state / data fetching | RTK Query (fixed rule, see CLAUDE.md)          | starter default   |
 | Client / UI state            | Zustand (fixed rule)                           | starter default   |
 | Forms + validation           | React Hook Form + Zod (fixed rule)             | starter default   |
-| Routing                      | React Router 7, lazy route per page            | starter default   |
+| Routing                      | React Router 8, lazy route per page            | starter default   |
 | Config / env                 | `VITE_*` validated by Zod in `src/lib/env.ts`  | starter default   |
 | Auth transport               | Bearer token, held in memory (Zustand)         | starter default   |
 | Quality floors               | Coverage ≥80% lines; ≤180 kB gzip per JS chunk | starter default   |
