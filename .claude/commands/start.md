@@ -110,9 +110,15 @@ claude.ai; if the Artifact tool isn't available, say so, skip this step, and not
 
 ## Step 6 — Commit + PR
 
-Commit the setup on `chore/project-setup` and, after confirming, push and open a PR. This
-PR is mostly deletions and config — suggest the human add the `large-pr-approved` label if
-the size check fails.
+Commit the setup on `chore/project-setup` and, after confirming, push and open a PR that
+fills in **every section** of `.github/pull_request_template.md` — never leave the template's
+placeholders. There's no OpenSpec change or Gate 1 here, so say so, and list each new
+dependency under "Review carefully" for the human to approve.
+
+This PR is always over the size limit, so add a "Why this is N lines" section: run
+`git diff --numstat origin/HEAD...HEAD` and group the lines into deleted template example /
+docs / generated (shadcn CSS, config JSON) / config + code, with the count for each and
+which need careful review. Then suggest the human add the `large-pr-approved` label.
 
 ## Step 7 — GitHub checklist (human-only — list it, don't do it)
 
