@@ -83,7 +83,7 @@ npm ci && npx playwright install chromium
 # From inside `claude` in the repo:  /install-github-app   (adds ANTHROPIC_API_KEY)
 ```
 
-1. **Branch protection** on the default branch: require `CI` + `PR size` checks, 1 review,
+1. **Branch protection** on the default branch: require `CI` (incl. `approvals`) + `PR size` checks, 1 review,
    and "Require review from Code Owners". Edit `.github/CODEOWNERS` with real people.
 2. **Preview deploys** (Vercel, Netlify, …) so Gate 2 can include a click-through.
 3. **Autopilot** stays off until you set the repo variable `AUTOPILOT_ENABLED=true`.
@@ -206,8 +206,10 @@ The gates only work if they fit into a real person's day. The rules that make th
 - **Surfaced judgement calls.** Agent PRs list "Decisions I made without asking", so the
   reviewer confirms choices instead of hunting for them in the diff.
 - **Hard stops are enforced by tools, not prose.** Merging, force-pushing and pushing to
-  the default branch are denied in `.claude/settings.json`; installs, pushes and edits to
-  CI / `CLAUDE.md` ask first; branch protection is the backstop.
+  the default branch are blocked by `.claude/hooks/guard-bash.sh` (which also catches
+  chained commands and `HEAD:master` refspecs the settings deny list misses); installs,
+  pushes and edits to CI / `CLAUDE.md` ask first; CI's `approvals` job fails any PR where
+  a bot adds an `approved:` line; branch protection is the backstop.
 - **The agent escalates instead of looping.** Three failed attempts at the same check →
   it stops and explains. It never disables a test or rule to get green.
 - **Corrections compound.** When a reviewer corrects the same thing twice, the agent

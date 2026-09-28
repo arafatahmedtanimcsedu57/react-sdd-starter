@@ -129,7 +129,7 @@ Print this checklist for the human; the agent can't and shouldn't do these:
 
 1. In `claude`: `/install-github-app` (adds the `ANTHROPIC_API_KEY` secret for `@claude`).
 2. `.github/CODEOWNERS`: replace the template owner with the real reviewers.
-3. Branch protection on the default branch: require `CI` + `PR size`, 1 review, Code Owner
+3. Branch protection on the default branch: require `CI` (incl. `approvals`) + `PR size`, 1 review, Code Owner
    review.
 4. Create the `large-pr-approved` label (repo → Issues → Labels → New label). Labels aren't
    copied from the template, and the setup PR needs it to pass the size check.
