@@ -71,4 +71,5 @@ jobs:
             6. Check size with `git diff --numstat origin/HEAD...HEAD`; over the limit means no
                PR — open the "Split needed" issue instead.
             7. Open a PR that fills in every section of .github/pull_request_template.md,
-               including "Decisions I made without asking". Do NOT merge.
+               including "Decisions I made without asking" (from the change's notes.md, which
+               you keep as you go: decisions, dead ends). Do NOT merge.
