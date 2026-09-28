@@ -44,4 +44,4 @@ exactly one change is open, use it; otherwise list them and ask.
    thing → stop and explain.
 6. **Ship + GATE 2** — confirm, push, open a PR filling in every section of
    `.github/pull_request_template.md`, including **Design** (link, screenshots, differences).
-   STOP. Never merge. After the human merges, tell them to run `/finish <change-name>`.
+   Open it as the feature-pipeline skill says (step 6 → "How to open it"). STOP. Never merge. After the human merges, tell them to run `/finish <change-name>`.

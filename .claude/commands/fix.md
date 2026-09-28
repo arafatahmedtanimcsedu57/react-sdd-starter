@@ -42,6 +42,7 @@ to run `/feature <description>` instead. Stop.
 7. **PR** — confirm before pushing. Fill in `.github/pull_request_template.md`, with
    **OpenSpec change:** `none — /fix (restores openspec/specs/<capability>)` and a risk tier
    from `CLAUDE.md` → Human in the loop. "Review carefully" names the fixed line and the
-   test that proves it.
+   test that proves it. Open it as the feature-pipeline skill says (step 6 → "How to open
+   it").
 8. **STOP at Gate 2.** Send the PR link, the root cause in one sentence, and the test that
    now guards it. Do not merge. No `/finish` is needed — there's no change folder to archive.

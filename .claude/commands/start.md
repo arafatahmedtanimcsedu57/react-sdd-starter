@@ -120,6 +120,9 @@ This PR is always over the size limit, so add a "Why this is N lines" section: r
 docs / generated (shadcn CSS, config JSON) / config + code, with the count for each and
 which need careful review. Then suggest the human add the `large-pr-approved` label.
 
+Open it as the feature-pipeline skill says (step 6 → "How to open it"), so the description
+reaches GitHub even when `gh` isn't installed.
+
 ## Step 7 — GitHub checklist (human-only — list it, don't do it)
 
 Print this checklist for the human; the agent can't and shouldn't do these:

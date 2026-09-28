@@ -165,6 +165,14 @@ what you think is wrong. Don't disable a test, a lint rule or a hook to get gree
   `.github/pull_request_template.md`. The "Review carefully" and "Safe to skim" sections
   are the point: tell the reviewer exactly which lines carry risk and why, so they don't
   have to read everything with equal attention.
+- **How to open it** (every command that opens a PR follows this): write the filled-in
+  description to `.git/PR_BODY.md` (inside `.git`, so it's never committed). If
+  `gh auth status` succeeds, run `gh pr create --title "<title>" --body-file .git/PR_BODY.md`.
+  If `gh` is missing or not signed in, don't just push and leave it: GitHub's web form would
+  open with the empty template. Instead give the human the compare link
+  (`https://github.com/<owner>/<repo>/compare/<branch>?expand=1`), the title, and the
+  path to `.git/PR_BODY.md`, and ask them to paste it into the description. Then suggest
+  installing `gh` (`gh auth login`) so next time it's automatic.
 - CI will re-run the full gate plus the PR size check; Vercel will post a preview URL.
 - **STOP at Gate 2. Do not merge** (it's blocked anyway). Send a short brief: PR link, risk
   tier, the 1–3 places to read carefully, and the "Decisions I made without asking" list.

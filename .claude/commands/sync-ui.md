@@ -36,5 +36,6 @@ Argument: `$ARGUMENTS` may name one feature page (slug). Empty → every built p
    - refresh `design/` for the synced pages and tokens
 5. **Verify** — `npm run check`, `npm run test:e2e`, and the visual self-check for the
    affected screens.
-6. **Ship + GATE 2** — confirm, push, open a PR (template, including **Design**). STOP.
+6. **Ship + GATE 2** — confirm, push, open a PR (template, including **Design**), as the feature-pipeline skill says
+   (step 6 → "How to open it"). STOP.
    After merge: `/finish ui-sync-<date>`.

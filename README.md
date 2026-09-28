@@ -31,6 +31,8 @@ React Hook Form + Zod 4 · Tailwind 4 · MSW 2 · Vitest 5 · Playwright · Open
 - **Claude Design** access on the same claude.ai account (the UI is designed there)
 - A **GitHub** repo made from this template ("Use this template"). Don't push project
   work back to the template itself.
+- **GitHub CLI** (`gh`), signed in with `gh auth login`. Claude uses it to open PRs with the
+  description filled in. Without it, you paste the description in yourself.
 
 ## 2. Set up (once per project)
 
