@@ -18,6 +18,7 @@ who made it and when, so a later reader knows it was deliberate.
 | Config / env                 | `VITE_*` validated by Zod in `src/lib/env.ts`  | starter default   |
 | Auth transport               | Bearer token, held in memory (Zustand)         | starter default   |
 | Quality floors               | Coverage ≥80% lines; ≤180 kB gzip per JS chunk | starter default   |
+| Error tracking               | Sentry, lazy-loaded, on only when DSN is set   | starter default   |
 
 Replace "starter default" with a name and date when your team confirms or changes a row.
 

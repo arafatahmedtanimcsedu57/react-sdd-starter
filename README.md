@@ -106,6 +106,17 @@ a backend that drifts from the contract fails loudly.
 - **OpenAPI spec available?** Point `openapi-config.ts` at it and run `npm run gen:api`.
   The typed endpoints and hooks go into the same API slice.
 
+**Error tracking (production):** create a Sentry project, then set these in your deploy
+environment (e.g. Vercel), not in `.env`:
+
+| Variable                                            | What it does                                                    |
+| --------------------------------------------------- | --------------------------------------------------------------- |
+| `VITE_SENTRY_DSN`                                   | Turns error reporting on. Unset → off (the default locally)     |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | At build time, uploads source maps so stack traces are readable |
+
+Crashes, unhandled promise rejections and route errors are reported automatically. To
+report an error you caught yourself, call `reportError(error)` from `src/lib/monitoring.ts`.
+
 ## 6. What must pass before a PR can merge
 
 Claude runs these while it works (via hooks), and CI runs them again on every PR:
