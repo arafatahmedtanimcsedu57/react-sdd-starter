@@ -149,6 +149,10 @@ Three libraries, three jobs — do not mix them up:
 | Client / UI state            | **Zustand**               | Redux slices for UI state         |
 | Forms + validation           | **React Hook Form + Zod** | uncontrolled ad-hoc validation    |
 
+Code samples for each (api slice + endpoints, codegen config, response guard, Zustand store,
+form, MSW handlers) live in `.claude/rules/` and load when you open a matching file. Read the
+matching one before creating the first file of that kind.
+
 ### Server state + data fetching — RTK Query
 
 - All server data goes through RTK Query (from `@reduxjs/toolkit`). No raw `fetch`/`axios`
@@ -157,28 +161,7 @@ Three libraries, three jobs — do not mix them up:
   consume the generated hooks (`useGetXQuery`, `useAddXMutation`).
 - Redux Toolkit exists in this project **only** as the RTK Query API layer.
 - If an OpenAPI/Swagger spec exists, prefer generating this layer — see **API contracts &
-  mocking** below. The hand-written form below is for when there's no clean spec.
-
-```ts
-// src/services/api.ts — the ONE slice, no endpoints. baseQuery adds the base URL from env,
-// the Bearer token from useSessionStore, and signs out on 401. Never create a second slice.
-export const api = createApi({ reducerPath: 'api', baseQuery, endpoints: () => ({}) })
-
-// src/features/items/api.ts — the feature owns its endpoints + tags
-export const itemsApi = api.enhanceEndpoints({ addTagTypes: ['Item'] }).injectEndpoints({
-  endpoints: (build) => ({
-    getItems: build.query<Item[], void>({ query: () => 'items', providesTags: ['Item'] }),
-    addItem: build.mutation<Item, NewItem>({
-      query: (body) => ({ url: 'items', method: 'POST', body }),
-      invalidatesTags: ['Item'],
-    }),
-  }),
-})
-export const { useGetItemsQuery, useAddItemMutation } = itemsApi
-```
-
-`src/store.ts` exports `makeStore()` (fresh store per test via `src/test/render.tsx`) and the
-app's `store`, which `main.tsx` passes to `<Provider>`.
+  mocking** below.
 
 ### Client / UI state — Zustand
 
@@ -186,67 +169,11 @@ app's `store`, which `main.tsx` passes to `<Provider>`.
   lives in Zustand stores — not Redux.
 - One store per concern; keep stores small; **select narrowly** to avoid re-renders.
 
-```ts
-// src/stores/useUiStore.ts
-import { create } from 'zustand'
-
-interface UiState {
-  sidebarOpen: boolean
-  toggleSidebar: () => void
-}
-export const useUiStore = create<UiState>((set) => ({
-  sidebarOpen: false,
-  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
-}))
-
-// usage — narrow selector, not the whole store:
-// const open = useUiStore((s) => s.sidebarOpen)
-```
-
 ### Forms + validation — React Hook Form + Zod
 
 - Every form uses `react-hook-form` with a Zod schema via `@hookform/resolvers/zod`.
 - The Zod schema is the single source of truth; infer the TS type from it with `z.infer`.
 - Reuse Zod schemas to validate RTK Query request/response payloads where it adds safety.
-
-```tsx
-// src/features/<feature>/components/ExampleForm.tsx  (shared form → src/components/)
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-
-const schema = z.object({
-  name: z.string().min(1, 'Required'),
-  quantity: z.coerce.number().positive('Must be greater than 0'),
-})
-export type ExampleValues = z.infer<typeof schema>
-
-export interface ExampleFormProps {
-  onSubmit: (v: ExampleValues) => void
-}
-
-export function ExampleForm({ onSubmit }: ExampleFormProps) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ExampleValues>({ resolver: zodResolver(schema) })
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <label htmlFor="name">Name</label>
-      <input id="name" {...register('name')} />
-      {errors.name && <p role="alert">{errors.name.message}</p>}
-
-      <label htmlFor="quantity">Quantity</label>
-      <input id="quantity" inputMode="numeric" {...register('quantity')} />
-      {errors.quantity && <p role="alert">{errors.quantity.message}</p>}
-
-      <button type="submit">Save</button>
-    </form>
-  )
-}
-```
 
 ## API contracts & mocking (fixed rules)
 
@@ -278,39 +205,6 @@ Three cases — pick based on what exists:
 
 - Validate RTK Query responses with the Zod schema via `transformResponse`, so a backend that
   drifts from the agreed shape fails loudly instead of silently.
-
-```ts
-// codegen (case 1a): generated endpoints inject into the same `api` slice, then `npm run gen:api`
-// openapi-config.ts
-import type { ConfigFile } from '@rtk-query/codegen-openapi'
-const config: ConfigFile = {
-  schemaFile: './openapi.json', // or a URL to the live Swagger
-  apiFile: './src/services/api.ts',
-  apiImport: 'api',
-  outputFile: './src/services/generatedApi.ts',
-  hooks: true,
-}
-export default config
-```
-
-```ts
-// response guard (any case): validate against the Zod schema
-getItems: build.query<Item[], void>({
-  query: () => 'items',
-  transformResponse: (raw) => z.array(itemSchema).parse(raw),
-}),
-```
-
-```ts
-// mocks from the contract:  src/mocks/handlers.ts
-import { http, HttpResponse } from 'msw'
-import { itemSchema } from '../features/items/schema'
-import { apiBaseUrl } from '../lib/env'
-const items = [itemSchema.parse({ id: '1', name: 'Example' })] // fixture must satisfy the schema
-export const handlers = [http.get(`${apiBaseUrl}/items`, () => HttpResponse.json(items))]
-// src/mocks/browser.ts  → setupWorker(...handlers)   (dev / frontend-first)
-// src/mocks/server.ts   → setupServer(...handlers)   (tests)
-```
 
 ## Testing (details in the feature-pipeline skill)
 

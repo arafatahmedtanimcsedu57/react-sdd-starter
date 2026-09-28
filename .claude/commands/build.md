@@ -38,7 +38,8 @@ exactly one change is open, use it; otherwise list them and ask.
 4. **Implement** on branch `feat/<change-name>` with the `openspec-apply-change` skill,
    task by task with tests, matching the artboards. Run `react-reviewer` after a chunk. If the
    conversation is long, ask the human to `/clear` and run `/build <change-name>` again (it
-   resumes: approved line present → skip to the first unticked task).
+   resumes: approved line present → read `notes.md`, then skip to the first unticked task).
+   Log decisions and dead ends in the change's `notes.md` as they happen (see the skill).
 5. **Verify** — `npm run check` and `npm run test:e2e` (includes axe), then the visual
    self-check (screenshots vs artboards). Fix until green; 3 failed attempts at the same
    thing → stop and explain.

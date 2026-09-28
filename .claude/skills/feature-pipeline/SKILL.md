@@ -132,8 +132,12 @@ correction. How much attention a change needs depends on its **risk tier** (see
   file; before you end a turn, the tests related to changed files and react-doctor run.
   Their errors come back to you — fix immediately, don't defer.
 - Hit a decision the spec doesn't settle? Stop and ask (one question, your default
-  attached). If it's minor and reversible, pick the default and log it under "Decisions I
-  made without asking" for the PR.
+  attached). If it's minor and reversible, pick the default and log it in `notes.md`.
+- Keep `openspec/changes/<change-name>/notes.md` as you go — one line per entry, written
+  when it happens, not at the end: decisions made without asking, dead ends ("tried X, fails
+  because Y"), and anything the next session needs that the `tasks.md` ticks don't carry.
+  A resumed build (after `/clear` or a compacted conversation) reads it before the first
+  unticked task. The PR's "Decisions I made without asking" is built from it.
 - Write tests as you go (see "Testing standard" below). Every new piece of logic gets a test.
 - Place every new file according to the **folder structure** in `CLAUDE.md`; never invent a
   new top-level folder or a parallel one that does the same job.
