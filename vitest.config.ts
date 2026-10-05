@@ -8,7 +8,7 @@ export default defineConfig({
     environmentOptions: { jsdom: { url: 'http://localhost:5173' } },
     globals: true,
     setupFiles: './src/test/setup.ts',
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.test.mjs'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

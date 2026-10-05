@@ -7,7 +7,9 @@
       "Bash(git push origin main:*)",
       "Bash(git push origin master:*)",
       "Edit(**/src/services/generatedApi.ts)",
-      "Edit(**/public/mockServiceWorker.js)"
+      "Edit(**/public/mockServiceWorker.js)",
+      "Edit(**/features.json)",
+      "Edit(**/features.ledger.jsonl)"
     ],
     "ask": [
       "Bash(npm install:*)",
@@ -17,7 +19,8 @@
       "Bash(gh pr create:*)",
       "Edit(**/.github/**)",
       "Edit(**/CLAUDE.md)",
-      "Edit(**/.claude/settings.json)"
+      "Edit(**/.claude/settings.json)",
+      "Bash(npm run features -- scope:*)"
     ]
   },
   "hooks": {

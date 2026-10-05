@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
-# Stop: before Claude ends a turn that left source changes behind, run the tests related
-# to those files and react-doctor on them. Failures go back to Claude (exit 2) once;
-# if the retry still fails, the turn ends and the human sees the red result.
+# Stop: before Claude ends a turn, check the changes stay inside the active feature's scope,
+# then run the tests related to changed source files and react-doctor on them. Failures go
+# back to Claude (exit 2) once; if the retry still fails, the turn ends and the human sees
+# the red result.
 set -u
 input=$(cat)
 [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false')" = "true" ] && exit 0
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+
+# WIP=1 covers files too: everything changed on this branch must sit inside the active
+# feature's scope (features.json). No active feature → nothing to check.
+if ! out=$(node scripts/harness/scope.mjs 2>&1); then
+  printf '%s\n' "$out" >&2
+  exit 2
+fi
 
 changed=$(
   {

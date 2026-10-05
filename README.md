@@ -164,14 +164,17 @@ yourself, call `reportError(error)` from `src/lib/monitoring.ts`.
 
 Claude runs these while it works (via hooks), and CI runs them again on every PR:
 
-| Check                  | Command            | Fails when                                                                |
-| ---------------------- | ------------------ | ------------------------------------------------------------------------- |
-| Types, lint, format    | `npm run check`    | any error, or an import in the wrong direction                            |
-| Unit + component tests | (part of `check`)  | a test fails, or coverage drops below the floor in `vitest.config.ts`     |
-| React health           | (part of `check`)  | react-doctor finds a new issue in changed files                           |
-| Build + bundle budget  | `npm run build`    | the build breaks, or any JS chunk exceeds 180 kB gzipped                  |
-| End-to-end + a11y      | `npm run test:e2e` | a key flow breaks, or axe finds an accessibility violation                |
-| PR size                | CI only            | over 400 reviewable lines (a human can add the `large-pr-approved` label) |
+| Check                  | Command                           | Fails when                                                                |
+| ---------------------- | --------------------------------- | ------------------------------------------------------------------------- |
+| Types, lint, format    | `npm run check`                   | any error, or an import in the wrong direction                            |
+| Unit + component tests | (part of `check`)                 | a test fails, or coverage drops below the floor in `vitest.config.ts`     |
+| React health           | (part of `check`)                 | react-doctor finds a new issue in changed files                           |
+| Harness                | (part of `check`)                 | `features.json` edited by hand, or `CLAUDE.md` over 200 lines             |
+| Feature proof          | `npm run features -- verify <id>` | the feature's own proof command (unit + its e2e spec) fails               |
+| Scope                  | Stop hook / `npm run scope`       | the branch touches files outside the active feature's folders             |
+| Build + bundle budget  | `npm run build`                   | the build breaks, or any JS chunk exceeds 180 kB gzipped                  |
+| End-to-end + a11y      | `npm run test:e2e`                | a key flow breaks, or axe finds an accessibility violation                |
+| PR size                | CI only                           | over 400 reviewable lines (a human can add the `large-pr-approved` label) |
 
 Dependabot opens grouped dependency-update PRs every week, and each one goes through the
 same checks.
@@ -190,12 +193,20 @@ same checks.
 | `npm run test:e2e`      | Playwright (starts the dev server with mocks)                 |
 | `npm run format`        | Prettier (write)                                              |
 | `npm run gen:api`       | Generate the API layer from an OpenAPI spec                   |
+| `npm run features`      | Feature list: `add`, `start`, `block`, `verify`, `check`      |
+| `npm run progress`      | Refresh the generated block in `PROGRESS.md` and print it     |
+| `npm run scope`         | Changes outside the active feature's scope                    |
+| `npm run harness:check` | Feature list matches its ledger; `CLAUDE.md` stays short      |
 
 ## 9. Project map
 
 | Path                  | What it is                                                             |
 | --------------------- | ---------------------------------------------------------------------- |
 | `features.md`         | **You own it.** What the app does, in plain words                      |
+| `features.json`       | Machine copy: proof command, scope, state (only `npm run features`)    |
+| `PROGRESS.md`         | Handoff note: where work stopped and what's next                       |
+| `DECISIONS.md`        | Why choices were made, so later sessions don't undo them               |
+| `scripts/harness/`    | The feature list, progress and scope scripts (+ their tests)           |
 | `architecture.md`     | **You own it.** Tech decisions, API sources, design links              |
 | `CLAUDE.md`           | The rules Claude follows every session                                 |
 | `PIPELINE.md`         | The full playbook: phases, gates, who does what                        |

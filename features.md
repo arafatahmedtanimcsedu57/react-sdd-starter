@@ -6,9 +6,15 @@ entries, but a person confirms each one before it feeds an OpenSpec proposal.
 For each feature, write behaviour and states, not implementation. If something is unknown,
 write it under "Open questions" rather than letting the agent guess.
 
+Each entry has an **ID** that matches `features.json`, which holds what a script needs:
+the proof command, the folders it may touch (scope) and its state. Only
+`npm run features` changes that file (see `CLAUDE.md` → Feature list).
+
 ---
 
 ## App-wide (every page)
+
+**ID:** F01
 
 **Behaviour**
 
@@ -22,6 +28,8 @@ write it under "Open questions" rather than letting the agent guess.
 ---
 
 ## Items (example — delete when you start your own)
+
+**ID:** F02
 
 **Who / why:** A user keeps a short list of items and adds new ones.
 

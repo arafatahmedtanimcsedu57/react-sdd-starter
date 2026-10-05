@@ -46,6 +46,9 @@ The fixed folder structure (authoritative copy lives in `CLAUDE.md`):
 <project>/
 ├── CLAUDE.md                     # always-loaded backbone: commands + conventions + rules + structure
 ├── features.md                   # human: what we're building
+├── features.json                 # machine copy: id, proof command, scope, state (+ .ledger.jsonl)
+├── PROGRESS.md  DECISIONS.md     # session handoff + why choices were made
+├── scripts/harness/              # npm run features / progress / scope / harness:check
 ├── architecture.md               # human: tech decisions + design tokens + styling/UI choice
 ├── openspec/
 │   ├── specs/                    # source of truth (living specs)
@@ -132,7 +135,12 @@ re-reads it, and `/sync-ui` brings built code in line with later edits. Details:
 
 ```
 npm run check
+npm run features -- verify <id>   # check + the feature's proof command (with its e2e)
 ```
+
+Around every session: **clock in** (`npm run progress`, read `PROGRESS.md` +
+`DECISIONS.md`) and **clock out** (update `PROGRESS.md`, commit). One feature is active at a
+time, and the Stop hook fails a turn that edits files outside that feature's scope.
 
 ## Phase 5 — Verify + Ship + Gate 2
 
@@ -173,10 +181,13 @@ The files are the documentation — this playbook doesn't copy them (copies drif
 | -------------------------------------- | ------------------------------------------------------ |
 | Conventions + human rules              | `CLAUDE.md`                                            |
 | Product intent                         | `features.md`                                          |
+| Feature ids, proof commands, scope     | `features.json` (changed only by `npm run features`)   |
+| Session handoff + decision log         | `PROGRESS.md`, `DECISIONS.md`                          |
 | Tech decisions + tokens                | `architecture.md`                                      |
 | Spec rules (risk, size, approval line) | `openspec/config.yaml`                                 |
 | Edit-time self-correction              | `.claude/hooks/post-edit.sh` (prettier + eslint + tsc) |
-| Turn-end self-correction               | `.claude/hooks/stop-check.sh` (related tests + doctor) |
+| Turn-end self-correction               | `.claude/hooks/stop-check.sh` (scope + tests + doctor) |
+| Review rubric + verdict                | `.claude/agents/react-reviewer.md`                     |
 | What the agent may not do              | `.claude/settings.json` → `permissions`                |
 | Workflow for the agent                 | `.claude/skills/feature-pipeline/SKILL.md`             |
 | User commands                          | `.claude/commands/` (six commands)                     |

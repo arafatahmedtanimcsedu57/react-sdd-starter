@@ -75,6 +75,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check
+      - run: npm run harness:check # features.json matches its ledger; CLAUDE.md stays short
       - run: npm run test:coverage
       - run: npm run build # includes the bundle-size budget
       - run: npx playwright install --with-deps chromium

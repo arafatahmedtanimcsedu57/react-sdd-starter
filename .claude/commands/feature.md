@@ -22,7 +22,10 @@ link, open questions, approved or not) and the next command to run. Stop.
 ## Steps
 
 1. **Define** — capture intent in `features.md` (behaviour, states, edge cases, open
-   questions). For small changes, a one-line note is fine. If the change touches an API,
+   questions). For small changes, a one-line note is fine. Once the human confirms the
+   entry, register it: `npm run features -- add --id F0n --title "…" --verify "<unit tests
+&& npx playwright test e2e/<feature>.spec.ts>" --scope <folders>` and add `**ID:** F0n`
+   to the entry. Reuse the id if the change extends an existing feature. If the change touches an API,
    **establish the contract first** (`CLAUDE.md` → API contracts).
 2. **Design check** — read the project canvas (link in `architecture.md` → Design) and look
    for this feature's page.
@@ -33,7 +36,8 @@ link, open questions, approved or not) and the next command to run. Stop.
    - **No canvas yet** (setup skipped it) → ask whether to create it now (default yes).
 3. **Spec** — run the `openspec-propose` skill. `design.md` lists the artboards the change
    implements (`<slug>/<State>.dc.html`). If it will exceed 400 reviewable lines, split it
-   (see the skill). `tasks.md` ends with `approved: <pending>`.
+   (see the skill). `proposal.md` names the feature (`Feature: F0n`); `tasks.md` ends with
+   `approved: <pending>`.
 4. **Hand over** — send, then STOP:
 
    ```
