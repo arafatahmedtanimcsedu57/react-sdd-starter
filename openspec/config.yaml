@@ -13,6 +13,7 @@ rules:
     - 'Start with a "Risk tier: low | medium | high" line, using the definitions in CLAUDE.md → Human in the loop'
     - 'Include an "Open questions" section. List every product/UX/contract decision you could not settle from features.md or architecture.md, each with your suggested default. Write "None" only if there truly are none'
     - 'Include a "Non-goals" section'
+    - 'Add a line "Feature: <id>" naming the features.json entry this change builds (npm run features lists them)'
     - 'If this change depends on another, add a line "depends on: <change-name>"'
     - 'List any new npm dependency with a one-line justification; a new dependency makes the change at least medium risk'
   design:

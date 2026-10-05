@@ -37,12 +37,15 @@ to run `/feature <description>` instead. Stop.
 5. **Spec gap?** If the bug happened because the spec missed a case (e.g. an empty list),
    add that scenario to the capability's `openspec/specs/<capability>/spec.md` in the same
    PR, so the living spec matches the fix.
-6. **Verify** — `npm run check`, plus `npm run test:e2e` if a user flow is touched. Same
+6. **Verify** — `npm run check`, then the proof command of the feature the bug belongs to
+   (`verify` in `features.json`, shown by `npm run features`), plus `npm run test:e2e` if a
+   user flow is touched. Same
    self-correct rules as `/build`: fix red, stop after 3 failed attempts on the same check.
 7. **PR** — confirm before pushing. Fill in `.github/pull_request_template.md`, with
    **OpenSpec change:** `none — /fix (restores openspec/specs/<capability>)` and a risk tier
    from `CLAUDE.md` → Human in the loop. "Review carefully" names the fixed line and the
    test that proves it. Open it as the feature-pipeline skill says (step 6 → "How to open
    it").
-8. **STOP at Gate 2.** Send the PR link, the root cause in one sentence, and the test that
+8. **Clock out** (`CLAUDE.md` → Sessions): note the fix in `PROGRESS.md`.
+9. **STOP at Gate 2.** Send the PR link, the root cause in one sentence, and the test that
    now guards it. Do not merge. No `/finish` is needed — there's no change folder to archive.

@@ -34,6 +34,11 @@ export default tseslint.config(
     },
   },
   {
+    // Harness CLIs run in Node, not the browser.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
+  },
+  {
     files: ['src/lib/**', 'src/types/**'],
     ignores: ['src/**/*.test.*'],
     rules: noImport('features', 'routes', 'components', 'hooks', 'services', 'stores'),

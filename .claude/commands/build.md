@@ -12,6 +12,8 @@ exactly one change is open, use it; otherwise list them and ask.
 
 ## Steps
 
+0. **Clock in** (`CLAUDE.md` → Sessions): `npm run progress`, read `PROGRESS.md` and
+   `DECISIONS.md`. Find the change's feature id on the `Feature:` line of `proposal.md`.
 1. **Re-read the design.** Read the feature's page from the live canvas — the human may have
    edited it since `/feature`. Compare it with `design.md` / `tasks.md` and classify each
    difference (visual or behaviour, see claude-design.md). Behaviour differences → update
@@ -35,14 +37,18 @@ exactly one change is open, use it; otherwise list them and ask.
 
 3. **Snapshot** the approved page into `design/` (artboards, `canvas.json`, `tokens.json`).
    If the design system's tokens changed, update the styling layer's tokens first.
-4. **Implement** on branch `feat/<change-name>` with the `openspec-apply-change` skill,
+4. **Implement** on branch `feat/<change-name>`: first `npm run features -- start <id>`
+   (WIP=1 — it refuses while another feature is active), then the `openspec-apply-change` skill,
    task by task with tests, matching the artboards. Run `react-reviewer` after a chunk. If the
    conversation is long, ask the human to `/clear` and run `/build <change-name>` again (it
    resumes: approved line present → read `notes.md`, then skip to the first unticked task).
    Log decisions and dead ends in the change's `notes.md` as they happen (see the skill).
-5. **Verify** — `npm run check` and `npm run test:e2e` (includes axe), then the visual
-   self-check (screenshots vs artboards). Fix until green; 3 failed attempts at the same
-   thing → stop and explain.
+5. **Verify** — `npm run features -- verify <id>` (runs `npm run check`, then the feature's
+   proof command with its e2e spec; only a pass marks it `passing`), `npm run test:e2e`
+   (includes axe), then the visual self-check (screenshots vs artboards). `react-reviewer`
+   must end with `VERDICT: PASS`. Fix until green; 3 failed attempts at the same thing →
+   `npm run features -- block <id> --reason "…"`, stop and explain.
 6. **Ship + GATE 2** — confirm, push, open a PR filling in every section of
    `.github/pull_request_template.md`, including **Design** (link, screenshots, differences).
-   Open it as the feature-pipeline skill says (step 6 → "How to open it"). STOP. Never merge. After the human merges, tell them to run `/finish <change-name>`.
+   Open it as the feature-pipeline skill says (step 6 → "How to open it"). Clock out
+   (`CLAUDE.md` → Sessions) so `PROGRESS.md` names the PR and what's next. STOP. Never merge. After the human merges, tell them to run `/finish <change-name>`.

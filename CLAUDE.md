@@ -2,23 +2,27 @@
 
 Authoritative rules for this repo. Claude reads this every session — follow it over habit.
 (Project name, and the styling approach + UI library, are set during bootstrap.)
+`npm run harness:check` keeps this file under 200 lines: add detail to `.claude/rules/`.
+
+## Hard rules
+
+- Never merge, push to the default branch, or write a Gate 1 `approved:` line yourself.
+- Never change a feature's state by hand — only `npm run features` (see Feature list).
+- Stay inside the active feature's scope; one feature active at a time (WIP=1).
+- "Done" means `npm run check` + the feature's proof command passed — not that it looks done.
+- Never disable a test, rule or coverage floor to get green. 3 failed tries → stop and ask.
 
 ## Commands
 
-- Dev: npm run dev
-- Build: npm run build
-- Typecheck: npm run typecheck
-- Lint: npm run lint
-- Test: npm run test
-- E2E: npm run test:e2e
-- Doctor: npm run doctor
-- Format: npm run format
-- Coverage: npm run test:coverage
-- All gates (definition of done): npm run check
+- Dev: `npm run dev` · Build: `npm run build` · Format: `npm run format`
+- Typecheck: `npm run typecheck` · Lint: `npm run lint` · Doctor: `npm run doctor`
+- Test: `npm run test` · Coverage: `npm run test:coverage` · E2E: `npm run test:e2e`
+- Harness: `npm run features` · `npm run progress` · `npm run scope` · `npm run harness:check`
+- All gates (definition of done): `npm run check`
 
-Hooks already run prettier + eslint + typecheck after every edit, and related tests +
-react-doctor before you finish a turn. Their errors come back to you — fix them, don't
-work around them.
+Hooks already run prettier + eslint + typecheck after every edit, and the scope check,
+related tests + react-doctor before you finish a turn. Their errors come back to you — fix
+them, don't work around them.
 
 ## Slash commands (the human's only interface)
 
@@ -26,10 +30,40 @@ The human uses exactly six: `/start` (once: set up the project + its Claude Desi
 `/feature <idea>` (design + spec, then stop so they can edit the design), `/build
 <change-name>` (Gate 1 → code → PR), `/sync-ui [feature]` (code catches up with design
 edits), `/finish <change-name>` (after merge: archive the spec), `/fix <bug>` (a bug in
-shipped behaviour: failing test → fix → PR, no design or spec step). Every other skill (`feature-pipeline`, `openspec-*`) is internal —
-you invoke it; never tell the human to run it. When a vendored OpenSpec skill says "run
-`/opsx:propose`", say `/feature`; for `/opsx:apply`, say `/build <change-name>`; for `/opsx:archive` or
-`/opsx:sync`, say `/finish <change-name>`.
+shipped behaviour: failing test → fix → PR, no design or spec step). Every other skill
+(`feature-pipeline`, `openspec-*`) is internal — you invoke it; never tell the human to run
+it. When a vendored OpenSpec skill says "run `/opsx:propose`", say `/feature`; for
+`/opsx:apply`, say `/build <change-name>`; for `/opsx:archive` or `/opsx:sync`, say
+`/finish <change-name>`.
+
+## Sessions (clock in / clock out)
+
+Every session starts with no memory. The repo is the memory.
+
+- **Clock in:** `npm run progress` (refreshes and prints the state), then read
+  `PROGRESS.md` and `DECISIONS.md`. Continue from "Next step"; don't re-decide anything
+  `DECISIONS.md` settles without asking.
+- **While working:** a choice between real alternatives → one entry in `DECISIONS.md`
+  (what, why, what you rejected).
+- **Clock out** (before you stop, even mid-change): `npm run check` green or its failure
+  written down; `npm run progress`; update `PROGRESS.md` → Current work, Known issues,
+  Next step; no debug code or stray files left; commit on the feature branch.
+
+## Feature list
+
+`features.md` is the human's prose; `features.json` is the machine copy: id, proof command
+(`verify`), `scope` (folders it may touch) and state. Every entry in one has its ID in the
+other.
+
+- States: `not_started → active → passing`, `active ⇄ blocked`. `passing` is final.
+- `npm run features -- start <id>` before coding; only one feature is active (WIP=1).
+- `npm run features -- verify <id>` runs `npm run check` + the proof command; only a pass
+  moves it to `passing`. Every move is logged in `features.ledger.jsonl`.
+- New entry (after the human confirms it in `features.md`): `npm run features -- add --id
+F0n --title "…" --verify "<runnable command>" --scope <folders>`. The proof command
+  includes the feature's e2e spec when it has a user flow.
+- Need a folder outside the scope? Ask the human, then `npm run features -- scope <id>
+--add <folder>`.
 
 ## UI design (Claude Design)
 
@@ -82,62 +116,15 @@ one-line rule for this file. Don't add it until they agree.
 - Props typed with an explicit `<Component>Props` interface
 - Data fetching lives in hooks, never inline in components
 - Styling + UI library: as recorded in `architecture.md`
-- Place every file according to **Folder structure** below
 
 ## Folder structure
 
-Fixed layout. Put new files where they belong — do not invent new top-level folders or
-rename these.
-
-```
-src/
-├── main.tsx              # entry — wraps <App/> in <Provider store={store}>
-├── App.tsx               # app shell — mounts the router
-├── store.ts              # RTK Query store (configureStore)
-├── routes/               # routes.tsx (the route table) + one page component per route,
-│                         #   RootLayout, RouteError (error boundary + 404), RouteLoading
-├── features/             # feature-scoped code — one folder per domain
-│   └── <feature>/
-│       ├── components/   #   feature UI + colocated *.test.tsx
-│       ├── api.ts        #   RTK Query endpoints (injected into services/api)
-│       ├── store.ts      #   feature Zustand store (only if needed)
-│       ├── schema.ts     #   Zod schemas for this feature
-│       └── types.ts      #   feature-local types
-├── components/           # shared, reusable UI + colocated tests
-│   └── ui/               #   design-system primitives (shadcn / MUI wrappers)
-├── hooks/                # shared reusable hooks (use*)
-├── lib/                  # pure logic + utilities + colocated tests
-│   └── env.ts            #   validated VITE_* env (the only place that reads import.meta.env)
-├── services/             # RTK Query: the one api slice + shared query code
-│   ├── api.ts            #   createApi — every endpoint injects into this
-│   └── baseQuery.ts      #   base URL, auth header, 401 → sign out
-├── mocks/                # MSW handlers + browser/node servers (from the API contract)
-├── stores/               # shared / global Zustand stores (useSessionStore = auth token)
-├── types/                # shared TS types
-├── styles/               # global styles / tokens
-└── test/setup.ts         # test setup
-e2e/                      # Playwright specs
-design/                   # copy of the Claude Design as last built (written by /build, /sync-ui)
-```
-
-Placement rules:
-
-- Pure function → `src/lib/`. Shared hook → `src/hooks/`. Shared type → `src/types/`.
-- Anything specific to one domain → `src/features/<domain>/` (its components, endpoints,
-  Zustand store, Zod schema, and types live together).
-- RTK Query base slice → `src/services/api.ts`; feature endpoints inject into it from
-  `src/features/<domain>/api.ts`.
-- Reusable UI → `src/components/` (`components/ui/` for primitives); pages → `src/routes/`.
-- Tests are colocated next to the file they test; only Playwright specs live in `e2e/`.
-- New page → `src/routes/<Name>Page.tsx` + one entry in `src/routes/routes.tsx` (lazy-loaded).
-- New env variable → `src/lib/env.ts` (Zod) + `src/vite-env.d.ts` + `.env.example`. Never
-  read `import.meta.env` anywhere else.
-- Import direction is enforced by ESLint: `lib/` + `types/` import no app layer;
-  `components/`, `hooks/`, `stores/`, `services/` never import `features/` or `routes/`;
-  `features/` never imports `routes/`. A feature doesn't reach into another feature's
-  `components/` — move shared pieces up to `src/components/` or `src/lib/`.
-- Small apps may start with just the top-level folders and add `features/<domain>/` as they
-  grow — keep these names; never add a parallel folder that does the same job.
+Fixed layout — `src/` holds `routes/` (pages + `routes.tsx`), `features/<domain>/`,
+`components/` (`ui/`), `hooks/`, `lib/`, `services/`, `mocks/`, `stores/`, `types/`,
+`styles/`, `test/`; Playwright specs live in `e2e/`. Never invent a new top-level folder or
+a parallel one that does the same job. The full tree and placement rules are in
+`.claude/rules/folder-structure.md` — read it before creating a file. Import direction is
+enforced by ESLint.
 
 ## State, data fetching & forms (fixed rules)
 
@@ -149,67 +136,27 @@ Three libraries, three jobs — do not mix them up:
 | Client / UI state            | **Zustand**               | Redux slices for UI state         |
 | Forms + validation           | **React Hook Form + Zod** | uncontrolled ad-hoc validation    |
 
-Code samples for each (api slice + endpoints, codegen config, response guard, Zustand store,
-form, MSW handlers) live in `.claude/rules/` and load when you open a matching file. Read the
-matching one before creating the first file of that kind.
+- Redux Toolkit exists **only** as the RTK Query API layer; components use the generated
+  hooks, with `tagTypes` for cache invalidation.
+- Zustand: one small store per concern; **select narrowly** to avoid re-renders.
+- Forms: the Zod schema is the single source of truth (`z.infer` for the type).
 
-### Server state + data fetching — RTK Query
-
-- All server data goes through RTK Query (from `@reduxjs/toolkit`). No raw `fetch`/`axios`
-  in components or hooks.
-- Define endpoints in an api slice; use `tagTypes` for cache invalidation; components
-  consume the generated hooks (`useGetXQuery`, `useAddXMutation`).
-- Redux Toolkit exists in this project **only** as the RTK Query API layer.
-- If an OpenAPI/Swagger spec exists, prefer generating this layer — see **API contracts &
-  mocking** below.
-
-### Client / UI state — Zustand
-
-- Local and cross-component client state (UI toggles, filters, wizard steps, selected rows)
-  lives in Zustand stores — not Redux.
-- One store per concern; keep stores small; **select narrowly** to avoid re-renders.
-
-### Forms + validation — React Hook Form + Zod
-
-- Every form uses `react-hook-form` with a Zod schema via `@hookform/resolvers/zod`.
-- The Zod schema is the single source of truth; infer the TS type from it with `z.infer`.
-- Reuse Zod schemas to validate RTK Query request/response payloads where it adds safety.
+Code samples for each live in `.claude/rules/` (`rtk-query.md`, `zustand.md`, `forms.md`,
+`msw.md`) and load when you open a matching file. Read the matching one before creating
+the first file of that kind.
 
 ## API contracts & mocking (fixed rules)
 
-The API contract is a **first-class artifact**. Establish it BEFORE building the data layer or
-UI, and never hand-code endpoints from memory. Record its source in `architecture.md`.
-
-Three cases — pick based on what exists:
-
-1. **OpenAPI / Swagger spec exists** → decide per project:
-   - Clean, reasonably complete spec → **generate** the RTK Query layer with
-     `@rtk-query/codegen-openapi` (typed endpoints + hooks for free). Regenerate with
-     `npm run gen:api`. Don't hand-edit the generated file.
-   - Partial / messy spec → hand-write the api slice (still fully typed), using the spec as
-     reference.
-2. **Informal contract** (Postman collection, sample JSON, a written description) → capture it
-   as Zod schemas in `src/features/<domain>/schema.ts`. Those become the source of truth.
-3. **Frontend-first (API not built yet)** → write the contract FIRST — Zod schemas or an
-   OpenAPI stub, whichever exists (if neither, write the Zod schemas). Stand up MSW mocks from
-   it and develop + test against the mock. When the real backend ships, disable mocking; if it
-   honored the contract, nothing else changes.
-
-### Mocking — MSW (default everywhere)
-
-- MSW is the default mock layer for dev (frontend-first) **and** for component + e2e tests.
-- Handlers live in `src/mocks/`, derived from the contract (Zod schemas or OpenAPI).
-- Keep mock fixtures valid against the Zod schemas so the mock can't drift from the contract.
-
-### Runtime guard
-
-- Validate RTK Query responses with the Zod schema via `transformResponse`, so a backend that
-  drifts from the agreed shape fails loudly instead of silently.
+The API contract is a first-class artifact: establish it BEFORE the data layer or UI, never
+hand-code endpoints from memory, and record its source in `architecture.md`. MSW is the
+default mock layer for dev and tests; RTK Query responses are validated with the Zod schema
+in `transformResponse`. The three cases (OpenAPI / informal / frontend-first) and the
+mocking rules are in `.claude/rules/api-contracts.md`.
 
 ## Testing (details in the feature-pipeline skill)
 
 - Unit for pure logic; component tests via Testing Library (query by label/role);
-  Playwright for the key flow.
+  Playwright for every feature's user flow (`e2e/<feature>.spec.ts`).
 - **MSW is the default mock layer** for component + e2e tests. The node server is started in
   `src/test/setup.ts` (`listen` / `resetHandlers` / `close`); for e2e, run the dev server with
   mocking enabled or hit a real backend when one exists.
@@ -231,10 +178,18 @@ Three cases — pick based on what exists:
 ## Definition of done (self-check ALL before stopping)
 
 ```
-npm run check        # typecheck + lint + format:check + test:coverage + doctor
-npm run build        # when adding dependencies or pages — enforces the bundle budget
-npm run test:e2e     # when the change touches a user flow
+npm run check                      # typecheck + lint + format + harness + coverage + doctor
+npm run features -- verify <id>    # check + the feature's proof command → passing
+npm run build                      # when adding dependencies or pages — bundle budget
+npm run test:e2e                   # when the change touches a user flow (also for /fix)
 ```
 
-The bundle budget (`CHUNK_BUDGET_KB` in `vite.config.ts`) fails the build when a JS chunk
-grows too big. Fix it with lazy loading or a lighter dependency; raising it is a human call.
+`react-reviewer` must return `VERDICT: PASS` before you open a PR. The bundle budget
+(`CHUNK_BUDGET_KB` in `vite.config.ts`) fails the build when a JS chunk grows too big — fix
+it with lazy loading or a lighter dependency; raising it is a human call.
+
+## Hard rules (again — they matter most)
+
+No merging, no pushing to the default branch, no self-written approval. Feature states only
+via `npm run features`. One active feature, inside its scope. Done = commands passed. Never
+weaken a check to get green; after 3 failed tries, stop and ask.

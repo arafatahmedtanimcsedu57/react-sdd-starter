@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "features": [
+    {
+      "id": "F01",
+      "title": "App-wide: 404, crash screen, loading, 401 sign-out",
+      "verify": "npx vitest run src/routes/routes.test.tsx src/services/baseQuery.test.ts && npx playwright test e2e/app.spec.ts",
+      "scope": ["src/routes", "src/services", "src/lib", "src/stores"],
+      "state": "passing",
+      "attempts": 0,
+      "evidence": {
+        "commit": "fbfd467+uncommitted",
+        "at": "2026-10-05T06:19:39.637Z"
+      }
+    },
+    {
+      "id": "F02",
+      "title": "Items: list and add items",
+      "verify": "npx vitest run src/routes/ItemsPage.test.tsx src/features/items && npx playwright test e2e/items.spec.ts e2e/smoke.spec.ts",
+      "scope": ["src/features/items", "src/routes", "src/mocks", "src/stores"],
+      "state": "passing",
+      "attempts": 0,
+      "evidence": {
+        "commit": "fbfd467+uncommitted",
+        "at": "2026-10-05T06:20:15.166Z"
+      }
+    }
+  ]
+}
