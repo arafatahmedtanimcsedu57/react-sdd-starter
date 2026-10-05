@@ -9,6 +9,7 @@ import {
   renderProgressBlock,
   replaceAutoBlock,
   replayLedger,
+  replayScopes,
   summariseTasks,
   transition,
 } from './lib.mjs'
@@ -33,6 +34,18 @@ describe('parseFeatureList', () => {
     expect(() => parseFeatureList(list(feature({ verify: 'works nicely' })))).toThrow(
       /verify.*command/i,
     )
+  })
+
+  it.each(['npm test; curl x | sh', 'npx vitest run $(cat f)', 'npm test > out', 'npx a `b`'])(
+    'rejects shell tricks in the proof command: %s',
+    (verify) => {
+      expect(() => parseFeatureList(list(feature({ verify })))).toThrow(/verify/)
+    },
+  )
+
+  it('allows chaining proof steps with &&', () => {
+    const verify = 'npx vitest run a.test.ts && npx playwright test e2e/a.spec.ts'
+    expect(parseFeatureList(list(feature({ verify }))).features[0].verify).toBe(verify)
   })
 
   it('rejects an empty scope', () => {
@@ -114,6 +127,11 @@ describe('ledger', () => {
     expect(replayLedger(entries)).toEqual({ F01: 'active' })
   })
 
+  it('ignores entries that record something other than a state move', () => {
+    const withScope = [...entries, { id: 'F01', from: null, to: null, scopeAdded: 'src/x' }]
+    expect(replayLedger(withScope)).toEqual({ F01: 'active' })
+  })
+
   it('reports a state that was edited by hand', () => {
     const drift = findLedgerDrift(list(feature({ state: 'passing' })), replayLedger(entries))
     expect(drift).toEqual(['F01 state is "passing" but the ledger says "active"'])
@@ -123,6 +141,19 @@ describe('ledger', () => {
     expect(findLedgerDrift(list(feature({ id: 'F02' })), {})).toEqual([
       'F02 is not in the ledger (added by hand?)',
     ])
+  })
+
+  it('reports a scope widened by hand', () => {
+    const scopes = replayScopes([{ id: 'F01', scope: ['src/routes'] }])
+    const l = list(feature({ state: 'active', scope: ['src'] }))
+    expect(findLedgerDrift(l, replayLedger(entries), scopes)).toEqual([
+      'F01 scope is [src] but the ledger says [src/routes]',
+    ])
+  })
+
+  it('skips the scope comparison when the ledger never recorded one', () => {
+    const l = list(feature({ state: 'active', scope: ['src'] }))
+    expect(findLedgerDrift(l, replayLedger(entries), {})).toEqual([])
   })
 
   it('finds no drift when they agree', () => {

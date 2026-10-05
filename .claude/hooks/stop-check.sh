@@ -23,8 +23,9 @@ changed=$(
 )
 [ -z "$changed" ] && exit 0
 
-# shellcheck disable=SC2086
-if ! out=$(npx --no-install vitest related --run --passWithNoTests $changed 2>&1); then
+# One path per element, so file names with spaces or glob characters stay intact.
+mapfile -t files <<<"$changed"
+if ! out=$(npx --no-install vitest related --run --passWithNoTests -- "${files[@]}" 2>&1); then
   printf 'Tests related to your changes are failing. Fix them before finishing:\n%s\n' \
     "$(printf '%s' "$out" | tail -40)" >&2
   exit 2

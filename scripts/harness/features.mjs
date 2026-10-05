@@ -11,7 +11,14 @@
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import { addFeature, findLedgerDrift, parseFeatureList, replayLedger, transition } from './lib.mjs'
+import {
+  addFeature,
+  findLedgerDrift,
+  parseFeatureList,
+  replayLedger,
+  replayScopes,
+  transition,
+} from './lib.mjs'
 import { appendLedger, fail, git, path, readLedger, readList, writeList } from './io.mjs'
 
 const MAX_ATTEMPTS = 3
@@ -31,7 +38,8 @@ const { positionals, values } = parseArgs({
 const [command = 'list', id] = positionals
 
 function assertNoDrift(list) {
-  const drift = findLedgerDrift(list, replayLedger(readLedger()))
+  const ledger = readLedger()
+  const drift = findLedgerDrift(list, replayLedger(ledger), replayScopes(ledger))
   if (drift.length) {
     fail(
       `features.json was edited by hand:\n  ${drift.join('\n  ')}\n` +
@@ -137,7 +145,12 @@ switch (command) {
       fail(error.message)
     }
     writeList(next)
-    appendLedger({ id: newId, from: null, to: 'not_started' })
+    appendLedger({
+      id: newId,
+      from: null,
+      to: 'not_started',
+      scope: next.features.at(-1).scope,
+    })
     console.log(`✓ added ${newId}. Add "**ID:** ${newId}" to its entry in features.md.`)
     break
   }
@@ -164,6 +177,12 @@ switch (command) {
     }
     if (!list.features.some((f) => f.id === id)) fail(`${id} is not in features.json.`)
     writeList(parseFeatureList(next))
+    appendLedger({
+      id,
+      from: null,
+      to: null,
+      scope: [...list.features.find((f) => f.id === id).scope, values.add],
+    })
     console.log(`✓ ${id} scope now includes ${values.add}`)
     break
   }

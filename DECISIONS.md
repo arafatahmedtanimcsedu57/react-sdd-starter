@@ -24,6 +24,10 @@ Format:
 harness:check` fails when the two disagree.
 - Rejected: a status line inside `features.md` — nothing can enforce it, and the agent
   could mark its own work done.
+- Limit: the ledger catches careless hand edits, not a determined one — anything that can
+  run Bash can append to it too. The real gate stays CI (`harness:check`) plus the human
+  reviewing `features.json` / the ledger in the PR. Proof commands run in a shell, so
+  they're limited to runners chained with `&&`; review a changed `verify` like a script.
 
 ## 2026-10-05: Scope is checked against the active feature at the end of every turn
 

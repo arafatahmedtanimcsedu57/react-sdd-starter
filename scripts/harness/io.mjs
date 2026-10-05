@@ -92,10 +92,17 @@ export function forkPoint() {
   return 'HEAD'
 }
 
-/** Files changed on this branch: committed since the fork point, staged, unstaged, untracked. */
+const DEFAULT_BRANCH = /^(main|master)$/
+
+/**
+ * Files changed on this branch: committed since the fork point, staged, unstaged, untracked,
+ * and deleted (deleting a file is a change too). On the default branch itself only
+ * uncommitted work counts, so unpushed history isn't blamed on the active feature.
+ */
 export function changedFiles() {
+  const onDefault = DEFAULT_BRANCH.test(git('rev-parse', '--abbrev-ref', 'HEAD'))
   const lists = [
-    git('diff', '--name-only', '--diff-filter=d', forkPoint()),
+    git('diff', '--name-only', onDefault ? 'HEAD' : forkPoint()),
     git('ls-files', '--others', '--exclude-standard'),
   ]
   return [...new Set(lists.join('\n').split('\n').filter(Boolean))].sort()

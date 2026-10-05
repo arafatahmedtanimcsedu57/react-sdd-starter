@@ -9,7 +9,9 @@
       "Edit(**/src/services/generatedApi.ts)",
       "Edit(**/public/mockServiceWorker.js)",
       "Edit(**/features.json)",
-      "Edit(**/features.ledger.jsonl)"
+      "Edit(**/features.ledger.jsonl)",
+      "Write(**/features.json)",
+      "Write(**/features.ledger.jsonl)"
     ],
     "ask": [
       "Bash(npm install:*)",

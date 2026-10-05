@@ -29,7 +29,11 @@ anything half-done.
 
 Failing checks, flaky tests, things that look wrong but were left alone (and why).
 
-- None.
+- The ledger stops careless hand edits, not determined ones (see `DECISIONS.md`); CI's
+  `harness:check` + PR review of `features.json` / the ledger are the real gate.
+- This branch is harness work, not a feature, so `npm run scope` would list its files if a
+  feature were active here. None is.
+- Branch not pushed and no PR opened yet — a human decides that.
 
 ## Next step
 

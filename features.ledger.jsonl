@@ -4,3 +4,5 @@
 {"at":"2026-10-05T06:19:40.439Z","commit":"fbfd467","id":"F01","from":"active","to":"passing"}
 {"at":"2026-10-05T06:19:45.841Z","commit":"fbfd467","id":"F02","from":"not_started","to":"active"}
 {"at":"2026-10-05T06:20:15.989Z","commit":"fbfd467","id":"F02","from":"active","to":"passing"}
+{"at":"2026-10-05T06:26:05.115Z","commit":"56ee447","id":"F01","from":null,"to":null,"scope":["src/routes","src/services","src/lib","src/stores"],"note":"scope baseline"}
+{"at":"2026-10-05T06:26:05.119Z","commit":"56ee447","id":"F02","from":null,"to":null,"scope":["src/features/items","src/routes","src/mocks","src/stores"],"note":"scope baseline"}

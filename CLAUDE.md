@@ -181,6 +181,7 @@ mocking rules are in `.claude/rules/api-contracts.md`.
 npm run check                      # typecheck + lint + format + harness + coverage + doctor
 npm run features -- verify <id>    # check + the feature's proof command → passing
 npm run build                      # when adding dependencies or pages — bundle budget
+npm run test:e2e                   # when the change touches a user flow (also for /fix)
 ```
 
 `react-reviewer` must return `VERDICT: PASS` before you open a PR. The bundle budget

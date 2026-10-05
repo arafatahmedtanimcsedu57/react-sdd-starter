@@ -1,9 +1,15 @@
 // Fails when this branch changes files outside the active feature's scope (WIP=1 also
 // means "one area at a time"). Runs in the Stop hook; `npm run scope` runs it by hand.
-import { findOutOfScope } from './lib.mjs'
-import { ALWAYS_IN_SCOPE, changedFiles, readList } from './io.mjs'
+import { findLedgerDrift, findOutOfScope, replayLedger, replayScopes } from './lib.mjs'
+import { ALWAYS_IN_SCOPE, changedFiles, fail, readLedger, readList } from './io.mjs'
 
-const active = readList().features.find((f) => f.state === 'active')
+const list = readList()
+// A hand-edited list (e.g. a widened scope) must not steer the check.
+const ledger = readLedger()
+const drift = findLedgerDrift(list, replayLedger(ledger), replayScopes(ledger))
+if (drift.length) fail(`features.json was edited by hand:\n  ${drift.join('\n  ')}`)
+
+const active = list.features.find((f) => f.state === 'active')
 if (!active) {
   console.log('scope: no active feature, nothing to check')
   process.exit(0)

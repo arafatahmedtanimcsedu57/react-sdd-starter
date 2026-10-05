@@ -4,13 +4,22 @@ import { z } from 'zod'
 
 export const STATES = ['not_started', 'active', 'blocked', 'passing']
 
-// A proof command must be something a shell can run, not a description of one.
+// A proof command must be something a shell can run, not a description of one. Steps may
+// be chained with `&&`; other shell syntax (; | $ ` < > newlines) is refused, because the
+// command runs in a shell, including in the autopilot job.
 const RUNNERS = /^(npx|npm|node|bash|sh|\.\/)\s*/
+const SHELL_TRICKS = /[;|$`<>&\n]/ // tested after removing every `&&`
+const proofCommand = z
+  .string()
+  .regex(RUNNERS, 'verify must be a runnable command (npx/npm/node/bash …)')
+  .refine((cmd) => !SHELL_TRICKS.test(cmd.replaceAll('&&', '')), {
+    message: 'verify may chain steps with && but no other shell syntax (; | $ ` < >)',
+  })
 
 const featureSchema = z.object({
   id: z.string().regex(/^F\d{2,}$/, 'id must look like F01'),
   title: z.string().min(1),
-  verify: z.string().regex(RUNNERS, 'verify must be a runnable command (npx/npm/node/bash …)'),
+  verify: proofCommand,
   scope: z.array(z.string().min(1)).min(1, 'scope needs at least one folder or file'),
   state: z.enum(STATES),
   attempts: z.number().int().min(0).default(0),
@@ -80,16 +89,34 @@ export function transition(list, id, to, { reason, evidence } = {}) {
 }
 
 export function replayLedger(entries) {
-  return entries.reduce((states, e) => ({ ...states, [e.id]: e.to }), {})
+  return entries
+    .filter((e) => e.to) // e.g. a scope change, which moves no state
+    .reduce((states, e) => ({ ...states, [e.id]: e.to }), {})
 }
 
-export function findLedgerDrift(list, ledgerStates) {
+/** The last scope the ledger recorded per feature (entries that carry a `scope`). */
+export function replayScopes(entries) {
+  return entries
+    .filter((e) => Array.isArray(e.scope))
+    .reduce((scopes, e) => ({ ...scopes, [e.id]: e.scope }), {})
+}
+
+const sameScope = (a, b) => [...a].sort().join('\n') === [...b].sort().join('\n')
+
+export function findLedgerDrift(list, ledgerStates, ledgerScopes = {}) {
   return list.features.flatMap((f) => {
     if (!(f.id in ledgerStates)) return [`${f.id} is not in the ledger (added by hand?)`]
+    const problems = []
     if (ledgerStates[f.id] !== f.state) {
-      return [`${f.id} state is "${f.state}" but the ledger says "${ledgerStates[f.id]}"`]
+      problems.push(`${f.id} state is "${f.state}" but the ledger says "${ledgerStates[f.id]}"`)
     }
-    return []
+    const recorded = ledgerScopes[f.id]
+    if (recorded && !sameScope(recorded, f.scope)) {
+      problems.push(
+        `${f.id} scope is [${f.scope.join(', ')}] but the ledger says [${recorded.join(', ')}]`,
+      )
+    }
+    return problems
   })
 }
 
