@@ -45,6 +45,21 @@ jobs:
             exit 1
           fi
 
+  # `.nvmrc` pins Node 24 for the main job, but package.json `engines` also allows Node 22.
+  # Run the fast gates on 22 so that promise is tested, not assumed.
+  node-22:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test
+
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20

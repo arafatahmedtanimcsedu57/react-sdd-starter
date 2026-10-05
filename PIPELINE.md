@@ -51,7 +51,7 @@ The fixed folder structure (authoritative copy lives in `CLAUDE.md`):
 │   ├── specs/                    # source of truth (living specs)
 │   └── changes/                  # proposals: proposal.md, design.md, tasks.md
 ├── .claude/
-│   ├── settings.json             # PostToolUse hooks (prettier + typecheck)
+│   ├── settings.json             # permissions + hooks (bash guard, post-edit, stop-check)
 │   ├── skills/                   # feature-pipeline + openspec-* (hidden; Claude uses them)
 │   ├── agents/                   # react-reviewer, codebase-explorer
 │   └── commands/                 # /start, /feature, /build, /sync-ui, /finish, /fix

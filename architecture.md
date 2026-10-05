@@ -66,4 +66,3 @@ Things the team hasn't settled yet. The agent asks about these instead of pickin
   chosen must serve `index.html` for unknown paths (SPA fallback) or deep links will 404.
 - Token refresh: `src/services/baseQuery.ts` signs out on 401; refresh-and-retry needs the
   backend's refresh endpoint.
-- Error monitoring (e.g. Sentry) — `RouteError` logs to the console only.
