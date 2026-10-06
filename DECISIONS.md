@@ -16,6 +16,24 @@ Format:
 
 ---
 
+## 2026-10-06: Hook and verify steps are traced to `.claude/traces/<day>.jsonl`
+
+- Why: the ledger records state moves, not what ran. When a Stop hook or `features verify`
+  failed, nothing showed which step failed, when, or how long it took. One JSON line per
+  step (source, step, exit, ms) is cheap; `npm run trace -- --failed` reads it back.
+- Rejected: committing traces — noisy diffs and merge conflicts for local evidence; logging
+  full command output — large, and the hook already feeds it back in the turn.
+- Revisit when: autopilot runs need a post-mortem — upload the folder as a CI artifact.
+
+## 2026-10-06: Clock-out is a command (`npm run clock-out`), not only a checklist
+
+- Why: "no debug code or stray files, PROGRESS.md updated, committed" was prose in
+  CLAUDE.md, so it got skipped. The command checks it and names the fix. `--fix` deletes
+  only untracked junk (`*.log`, `debug-*`, `*.orig` …); code leftovers are reported, never
+  edited. It does not re-run `npm run check` — a known red check written under Known
+  issues must not make a clean handoff impossible.
+- Rejected: running it in the Stop hook — that fires every turn, clock-out is per session.
+
 ## 2026-10-06: Project rules run as ESLint `no-restricted-syntax`, each message with a FIX
 
 - Why: rules that only live in `CLAUDE.md` get missed; a lint error lands in the same turn

@@ -26,6 +26,8 @@
     "progress": "node scripts/harness/progress.mjs",
     "scope": "node scripts/harness/scope.mjs",
     "ready": "node scripts/harness/ready.mjs",
+    "clock-out": "node scripts/harness/clock-out.mjs",
+    "trace": "node scripts/harness/trace.mjs",
     "harness:check": "node scripts/harness/features.mjs check && node scripts/harness/instructions.mjs"
   },
   "dependencies": {

@@ -19,7 +19,16 @@ import {
   replayScopes,
   transition,
 } from './lib.mjs'
-import { appendLedger, fail, git, path, readLedger, readList, writeList } from './io.mjs'
+import {
+  appendLedger,
+  appendTrace,
+  fail,
+  git,
+  path,
+  readLedger,
+  readList,
+  writeList,
+} from './io.mjs'
 
 const MAX_ATTEMPTS = 3
 
@@ -61,9 +70,18 @@ function move(list, featureId, to, opts) {
   return next
 }
 
-function run(cmd) {
+function run(cmd, featureId) {
   console.log(`\n$ ${cmd}`)
-  return spawnSync(cmd, { shell: true, stdio: 'inherit' }).status === 0
+  const started = Date.now()
+  const exit = spawnSync(cmd, { shell: true, stdio: 'inherit' }).status ?? 1
+  appendTrace({
+    source: 'features',
+    step: `verify ${featureId}`,
+    exit,
+    ms: Date.now() - started,
+    detail: cmd,
+  })
+  return exit === 0
 }
 
 function verify(list, featureId) {
@@ -72,7 +90,7 @@ function verify(list, featureId) {
   if (feature.state !== 'active') {
     fail(`${featureId} is ${feature.state}. Start it first: npm run features -- start ${featureId}`)
   }
-  if (run('npm run check') && run(feature.verify)) {
+  if (run('npm run check', featureId) && run(feature.verify, featureId)) {
     const dirty = git('status', '--porcelain') ? '+uncommitted' : ''
     const evidence = {
       commit: `${git('rev-parse', '--short', 'HEAD')}${dirty}`,
