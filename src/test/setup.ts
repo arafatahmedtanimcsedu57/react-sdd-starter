@@ -9,7 +9,7 @@ import { useUiStore } from '../stores/useUiStore'
 const initialUiState = useUiStore.getState()
 const initialSessionState = useSessionStore.getState()
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => {
   server.resetHandlers()
   resetMockData()

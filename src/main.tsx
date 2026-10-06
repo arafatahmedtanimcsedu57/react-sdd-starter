@@ -10,7 +10,7 @@ import './styles/index.css'
 async function enableMocking() {
   if (env.VITE_API_MOCKING !== 'enabled') return
   const { worker } = await import('./mocks/browser')
-  return worker.start({ onUnhandledRequest: 'bypass' })
+  return worker.start({ onUnhandledFrame: 'bypass' })
 }
 
 // Monitoring starts in parallel and never blocks the first render.
