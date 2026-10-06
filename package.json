@@ -71,5 +71,10 @@
     "workerDirectory": [
       "public"
     ]
+  },
+  "overrides": {
+    "@vitest/mocker": {
+      "msw": "$msw"
+    }
   }
 }
