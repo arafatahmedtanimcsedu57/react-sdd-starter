@@ -4,12 +4,22 @@
 # (gitignored; read it with `npm run trace`). Tracing never fails a hook.
 TRACE_SESSION=${TRACE_SESSION:-}
 
+# Microseconds, or empty on bash < 5 (no EPOCHREALTIME, e.g. macOS /bin/bash); the hooks run
+# under `set -u`, so an unset variable here would abort them.
+_trace_now() {
+  local t=${EPOCHREALTIME:-}
+  printf '%s' "${t/[.,]/}"
+}
+
 run() {
-  local source=$1 step=$2 start=${EPOCHREALTIME/[.,]/} code
+  local source=$1 step=$2 start code ms=null
+  start=$(_trace_now)
   shift 2
   out=$("$@" 2>&1)
   code=$?
-  local ms=$(((${EPOCHREALTIME/[.,]/} - start) / 1000))
+  local end
+  end=$(_trace_now)
+  [ -n "$start" ] && [ -n "$end" ] && ms=$(((end - start) / 1000))
   {
     mkdir -p .claude/traces &&
       jq -nc --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg session "$TRACE_SESSION" \

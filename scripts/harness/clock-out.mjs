@@ -7,12 +7,20 @@
 // It never edits code: debug leftovers are reported, not removed.
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, unlinkSync } from 'node:fs'
-import { autoBlockMatches, findJunk } from './lib.mjs'
-import { appendTrace, buildProgressBlock, changedFiles, git, path, PROGRESS } from './io.mjs'
+import { autoBlockMatches, findJunk, handwrittenPart } from './lib.mjs'
+import {
+  appendTrace,
+  buildProgressBlock,
+  changedFiles,
+  forkPoint,
+  git,
+  path,
+  PROGRESS,
+} from './io.mjs'
 
 const fix = process.argv.includes('--fix')
 const untracked = () =>
-  git('ls-files', '--others', '--exclude-standard').split('\n').filter(Boolean)
+  git('ls-files', '-z', '--others', '--exclude-standard').split('\0').filter(Boolean)
 const indent = (text) =>
   text
     .replace(/^\n+|\s+$/g, '')
@@ -51,23 +59,28 @@ const checks = [
   [
     'no leftovers in changed code',
     () => {
-      const code = changed.filter((f) => /\.(m?js|tsx?)$/.test(f) && existsSync(path(f)))
+      const code = changed.filter((f) => /\.[cm]?[jt]sx?$/.test(f) && existsSync(path(f)))
       if (!code.length) return null
       const r = spawnSync('npx', ['--no-install', 'eslint', '--no-warn-ignored', ...code], {
         cwd: path('.'),
         encoding: 'utf8',
       })
+      if (r.error) return `could not run eslint: ${r.error.message}\nFIX: npm ci`
       return r.status === 0 ? null : `${r.stdout}${r.stderr}\nFIX: each error says how.`
     },
   ],
   [
     'progress saved',
     () => {
-      if (!autoBlockMatches(readFileSync(path(PROGRESS), 'utf8'), buildProgressBlock())) {
+      if (!existsSync(path(PROGRESS))) return `${PROGRESS} is missing.`
+      const doc = readFileSync(path(PROGRESS), 'utf8')
+      if (!autoBlockMatches(doc, buildProgressBlock())) {
         return `${PROGRESS} is out of date.\nFIX: npm run progress`
       }
-      if (changed.length && !changed.includes(PROGRESS)) {
-        return `This branch changes files but not ${PROGRESS}.\nFIX: update Current work, Known issues and Next step.`
+      // The generated block changes with the branch name, so only the hand-written part counts.
+      const before = git('show', `${forkPoint()}:${PROGRESS}`)
+      if (changed.length && before && handwrittenPart(before) === handwrittenPart(doc)) {
+        return `This branch changes files but not ${PROGRESS}'s handoff.\nFIX: update Current work, Known issues and Next step.`
       }
       return null
     },
@@ -88,7 +101,12 @@ console.log('== clock-out ==')
 let failed = 0
 for (const [name, check] of checks) {
   const started = Date.now()
-  const problem = check()
+  let problem
+  try {
+    problem = check()
+  } catch (error) {
+    problem = `the check itself crashed: ${error.message}`
+  }
   appendTrace({ source: 'clock-out', step: name, exit: problem ? 1 : 0, ms: Date.now() - started })
   console.log(problem ? `[✗] ${name}\n${indent(problem)}` : `[✓] ${name}`)
   if (problem) failed++

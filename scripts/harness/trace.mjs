@@ -8,13 +8,18 @@ import { parseArgs } from 'node:util'
 import { formatTrace } from './lib.mjs'
 import { fail, readTraces, TRACES } from './io.mjs'
 
-const { values } = parseArgs({
-  options: {
-    day: { type: 'string', default: new Date().toISOString().slice(0, 10) },
-    limit: { type: 'string', default: '40' },
-    failed: { type: 'boolean', default: false },
-  },
-})
+let values
+try {
+  ;({ values } = parseArgs({
+    options: {
+      day: { type: 'string', default: new Date().toISOString().slice(0, 10) },
+      limit: { type: 'string', default: '40' },
+      failed: { type: 'boolean', default: false },
+    },
+  }))
+} catch (error) {
+  fail(`${error.message}. Options: --day YYYY-MM-DD, --limit N, --failed.`)
+}
 if (!/^\d{4}-\d{2}-\d{2}$/.test(values.day)) fail('--day must look like 2026-10-06.')
 const limit = Number.parseInt(values.limit, 10)
 if (!(limit > 0)) fail('--limit must be a positive number.')

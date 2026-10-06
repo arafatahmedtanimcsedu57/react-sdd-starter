@@ -5,6 +5,8 @@ import {
   autoBlockMatches,
   findJunk,
   formatTrace,
+  handwrittenPart,
+  parseTraceLines,
   checkInstructions,
   findLedgerDrift,
   findOutOfScope,
@@ -281,7 +283,17 @@ describe('autoBlockMatches', () => {
 describe('findJunk', () => {
   it('picks out leftovers and leaves real files alone', () => {
     const files = ['vite.log', 'debug-run.txt', 'src/a.tsx.orig', 'notes~', 'src/.DS_Store']
-    const real = ['src/debug.ts', 'src/routes/Log.tsx', 'src/lib/catalog.ts', 'PROGRESS.md']
+    const real = [
+      'src/debug.ts',
+      'src/routes/Log.tsx',
+      'src/lib/catalog.ts',
+      'PROGRESS.md',
+      // new, never-committed source must survive --fix
+      'src/lib/debug-utils.ts',
+      'e2e/debug-panel.spec.ts',
+      'debug-notes.md',
+      'src/components/ui/debug-overlay.tsx',
+    ]
     expect(findJunk([...files, ...real])).toEqual(files)
   })
 })
@@ -303,5 +315,30 @@ describe('formatTrace', () => {
       '12:00:01  stop-hook/ready   ok      40ms',
       '12:00:09  post-edit/eslint  ✗1     812ms  src/A.tsx',
     ])
+  })
+})
+
+describe('handwrittenPart', () => {
+  const doc = (auto, human) =>
+    `# P\n<!-- harness:auto:start -->\n${auto}\n<!-- harness:auto:end -->\n${human}`
+
+  it('ignores the generated block, so `npm run progress` alone is not a handoff', () => {
+    expect(handwrittenPart(doc('- **Branch:** a', 'Next: x'))).toBe(
+      handwrittenPart(doc('- **Branch:** b', 'Next:\n  x')),
+    )
+  })
+
+  it('changes when the human sections change', () => {
+    expect(handwrittenPart(doc('a', 'Next: x'))).not.toBe(handwrittenPart(doc('a', 'Next: y')))
+  })
+})
+
+describe('parseTraceLines', () => {
+  it('keeps entries and drops half-written or foreign lines', () => {
+    const good = { at: '2026-10-06T12:00:00Z', source: 's', step: 'x', exit: 0 }
+    const text = [JSON.stringify(good), '{"at":"2026-10-06T1', 'null', '{"step":"no at"}', ''].join(
+      '\n',
+    )
+    expect(parseTraceLines(text)).toEqual([good])
   })
 })

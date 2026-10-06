@@ -8,7 +8,8 @@ file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
 { [ -z "$file" ] || [ ! -f "$file" ]; } && exit 0
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
 TRACE_SESSION=$(printf '%s' "$input" | jq -r '.session_id // empty')
-TRACE_DETAIL=${file#"$PWD"/}
+TRACE_DETAIL=${file#"${CLAUDE_PROJECT_DIR:-$PWD}"/}
+TRACE_DETAIL=${TRACE_DETAIL#"$(pwd -P)"/}
 # shellcheck source=trace.sh
 . .claude/hooks/trace.sh
 

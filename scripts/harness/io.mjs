@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { join } from 'node:path'
-import { parseFeatureList, renderProgressBlock, summariseTasks } from './lib.mjs'
+import { parseFeatureList, parseTraceLines, renderProgressBlock, summariseTasks } from './lib.mjs'
 
 export const ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], {
   encoding: 'utf8',
@@ -37,7 +37,12 @@ export const ALWAYS_IN_SCOPE = [
 
 export function git(...args) {
   try {
-    return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' }).trim()
+    // quotePath=off: non-ASCII paths come back as-is, not as "caf\303\251.log".
+    return execFileSync('git', ['-c', 'core.quotePath=off', ...args], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: 'pipe',
+    }).trim()
   } catch {
     return ''
   }
@@ -159,14 +164,5 @@ export function appendTrace(entry) {
 export function readTraces(day) {
   const file = path(`${TRACES}/${day}.jsonl`)
   if (!existsSync(file)) return []
-  return readFileSync(file, 'utf8')
-    .split('\n')
-    .filter(Boolean)
-    .flatMap((line) => {
-      try {
-        return [JSON.parse(line)]
-      } catch {
-        return [] // a half-written line from a killed hook
-      }
-    })
+  return parseTraceLines(readFileSync(file, 'utf8'))
 }

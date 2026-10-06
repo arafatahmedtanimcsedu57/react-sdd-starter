@@ -202,9 +202,33 @@ export function autoBlockMatches(doc, block) {
   return facts(doc.slice(from + START.length, to)) === facts(block)
 }
 
-// Untracked files a session typically leaves behind. `clock-out --fix` deletes only these.
-const JUNK = [/\.log$/, /(^|\/)debug-[^/]*$/, /\.(orig|rej|tmp|bak)$/, /(^|\/)\.DS_Store$/, /~$/]
-export const findJunk = (untracked) => untracked.filter((f) => JUNK.some((re) => re.test(f)))
+/** PROGRESS.md minus its generated block: the part a session must write by hand. */
+export function handwrittenPart(doc) {
+  const from = doc.indexOf(START)
+  const to = doc.indexOf(END)
+  const human = from === -1 || to < from ? doc : doc.slice(0, from) + doc.slice(to + END.length)
+  return human.replace(/\s+/g, ' ').trim()
+}
+
+// Untracked files a session typically leaves behind. `clock-out --fix` deletes these, and git
+// never saw them, so a false positive is unrecoverable: `debug-*` only at the repo root, and
+// nothing that looks like source or docs is ever junk.
+const JUNK = [/\.log$/, /^debug-[^/]*$/, /\.(orig|rej|tmp|bak)$/, /(^|\/)\.DS_Store$/, /~$/]
+const NEVER_JUNK = /\.([cm]?[jt]sx?|css|json|md|html)$/
+export const findJunk = (untracked) =>
+  untracked.filter((f) => !NEVER_JUNK.test(f) && JUNK.some((re) => re.test(f)))
+
+/** Trace lines → entries, dropping half-written lines (a killed hook) and non-entries. */
+export function parseTraceLines(text) {
+  return text.split('\n').flatMap((line) => {
+    try {
+      const entry = JSON.parse(line)
+      return typeof entry?.at === 'string' ? [entry] : []
+    } catch {
+      return []
+    }
+  })
+}
 
 /** One aligned line per trace entry: time, source/step, ok or ✗<exit>, duration, detail. */
 export function formatTrace(entries) {
@@ -212,7 +236,7 @@ export function formatTrace(entries) {
   return entries.map((e) => {
     const name = `${e.source}/${e.step}`.padEnd(width)
     const status = (e.exit === 0 ? 'ok' : `✗${e.exit}`).padEnd(4)
-    const ms = e.ms === undefined ? '' : `${e.ms}ms`.padStart(8)
+    const ms = e.ms == null ? '' : `${e.ms}ms`.padStart(8)
     return `${e.at.slice(11, 19)}  ${name}  ${status}${ms}${e.detail ? `  ${e.detail}` : ''}`
   })
 }
