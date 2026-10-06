@@ -17,7 +17,8 @@ Authoritative rules for this repo. Claude reads this every session — follow it
 - Dev: `npm run dev` · Build: `npm run build` · Format: `npm run format`
 - Typecheck: `npm run typecheck` · Lint: `npm run lint` · Doctor: `npm run doctor`
 - Test: `npm run test` · Coverage: `npm run test:coverage` · E2E: `npm run test:e2e`
-- Harness: `npm run features` · `npm run progress` · `npm run scope` · `npm run harness:check`
+- Harness: `npm run ready` · `npm run features` · `npm run progress` · `npm run scope` ·
+  `npm run harness:check`
 - All gates (definition of done): `npm run check`
 
 Hooks already run prettier + eslint + typecheck after every edit, and the scope check,
@@ -40,7 +41,7 @@ it. When a vendored OpenSpec skill says "run `/opsx:propose`", say `/feature`; f
 
 Every session starts with no memory. The repo is the memory.
 
-- **Clock in:** `npm run progress` (refreshes and prints the state), then read
+- **Clock in:** `npm run ready` (right Node, deps installed), `npm run progress`, then read
   `PROGRESS.md` and `DECISIONS.md`. Continue from "Next step"; don't re-decide anything
   `DECISIONS.md` settles without asking.
 - **While working:** a choice between real alternatives → one entry in `DECISIONS.md`

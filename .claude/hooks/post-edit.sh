@@ -14,12 +14,17 @@ case "$file" in
   *) exit 0 ;;
 esac
 
-if ! out=$(npx --no-install eslint --no-warn-ignored "$file" 2>&1); then
-  printf 'ESLint errors in %s:\n%s\n' "$file" "$out" | head -40 >&2
+# A broken environment (wrong Node, missing node_modules) makes eslint/tsc fail for reasons
+# unrelated to the edit. Only checked after a failure, so a healthy edit pays nothing.
+explain() {
+  if ! env_out=$(node scripts/harness/ready.mjs 2>&1); then
+    printf '%s\n' "$env_out" >&2
+  else
+    printf "$1" "$file" "$out" | head -40 >&2
+  fi
   exit 2
-fi
-if ! out=$(npx --no-install tsc --noEmit --pretty false 2>&1); then
-  printf 'Typecheck failed after editing %s:\n%s\n' "$file" "$out" | head -40 >&2
-  exit 2
-fi
+}
+out=$(npx --no-install eslint --no-warn-ignored "$file" 2>&1) || explain 'ESLint errors in %s:\n%s\n'
+out=$(npx --no-install tsc --noEmit --pretty false 2>&1) ||
+  explain 'Typecheck failed after editing %s:\n%s\n'
 exit 0

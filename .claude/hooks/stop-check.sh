@@ -8,6 +8,13 @@ input=$(cat)
 [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false')" = "true" ] && exit 0
 cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
 
+# Wrong Node or stale node_modules makes every later check fail with a misleading stack
+# trace. Say so plainly instead; ready.mjs needs nothing installed to run.
+if ! out=$(node scripts/harness/ready.mjs 2>&1); then
+  printf '%s\n' "$out" >&2
+  exit 2
+fi
+
 # WIP=1 covers files too: everything changed on this branch must sit inside the active
 # feature's scope (features.json). No active feature → nothing to check.
 if ! out=$(node scripts/harness/scope.mjs 2>&1); then
