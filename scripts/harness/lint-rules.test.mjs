@@ -36,9 +36,24 @@ describe('project lint rules', () => {
     [
       'src/features/a/useA.ts',
       "export const load = () => fetch('/x')\n",
-      /Network calls.*FIX: .*RTK Query/,
+      /Network calls.*FIX: .*features\/<domain>\/api\.ts/,
     ],
     ['src/lib/a.test.ts', "import { it } from 'vitest'\nit.only('x', () => {})\n", /\.only.*FIX/],
+    [
+      'e2e/a.spec.ts',
+      "import { test } from '@playwright/test'\ntest.describe.only('x', () => {})\n",
+      /\.only.*FIX/,
+    ],
+    [
+      'e2e/a.spec.ts',
+      "import { test } from '@playwright/test'\ntest.fixme('x', async () => {})\n",
+      /skipped test.*FIX/,
+    ],
+    [
+      'src/components/A.tsx',
+      'export const A = ({ xs }: { xs: string[] }) => <ul>{xs.map((x, i) => <li key={`row-${i}`}>{x}</li>)}</ul>\n',
+      /index as key.*FIX/,
+    ],
     [
       'e2e/a.spec.ts',
       "import { test } from '@playwright/test'\ntest.skip('x', () => {})\n",
@@ -52,6 +67,14 @@ describe('project lint rules', () => {
 
   it.each([
     ['src/lib/a.ts', "console.error('real failure')\n"],
+    [
+      'e2e/a.spec.ts',
+      "import { test } from '@playwright/test'\ntest('x', ({ browserName }) => { test.skip(browserName === 'webkit', 'no webkit') })\n",
+    ],
+    [
+      'src/components/A.tsx',
+      'export const A = ({ xs }: { xs: { index: number }[] }) => <ul>{xs.map((x) => <li key={x.index}>{x.index}</li>)}</ul>\n',
+    ],
     ['src/services/a.ts', "export const load = () => fetch('/x')\n"],
     ['src/lib/a.test.ts', "import { it } from 'vitest'\nit('x', () => {})\n"],
     [

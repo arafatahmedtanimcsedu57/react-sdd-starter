@@ -38,7 +38,7 @@ const appCodeRules = [
     'render the content as JSX/text. If HTML is unavoidable, stop and ask the human.',
   ),
   ban(
-    "JSXAttribute[name.name='key'] > JSXExpressionContainer > Identifier[name=/^(i|idx|index)$/]",
+    "JSXAttribute[name.name='key'] Identifier[name=/^(i|idx|index)$/]:not(.property)",
     'An index as key breaks state and focus when the list is reordered or filtered.',
     'use a stable id from the data (e.g. key={item.id}).',
   ),
@@ -46,12 +46,14 @@ const appCodeRules = [
 
 const testRules = [
   ban(
-    "CallExpression[callee.object.name=/^(it|test|describe)$/][callee.property.name='only']",
+    ":matches(CallExpression[callee.object.name=/^(it|test|describe)$/], CallExpression[callee.object.property.name='describe'])[callee.property.name='only']",
     '.only runs one test and silently skips the rest, so a green run proves nothing.',
     'remove .only before finishing.',
   ),
   ban(
-    "CallExpression[callee.object.name=/^(it|test|describe)$/][callee.property.name='skip']",
+    // Declarations only: Playwright's conditional `test.skip(browserName === 'webkit', '…')`
+    // inside a test is fine.
+    ":matches(CallExpression[callee.object.name=/^(it|test|describe)$/], CallExpression[callee.object.property.name='describe'])[callee.property.name=/^(skip|fixme)$/][arguments.1.type=/FunctionExpression$/]",
     'A skipped test is a disabled check (CLAUDE.md: never disable a test to get green).',
     'make it pass, or delete it with the human’s OK.',
   ),
@@ -98,7 +100,7 @@ export default tseslint.config(
           name,
           message:
             'Network calls in UI code are hard to test and repeat loading/error logic. ' +
-            'FIX: add an endpoint in src/services (RTK Query) and use its generated hook.',
+            'FIX: inject an endpoint in src/features/<domain>/api.ts (RTK Query) and use its hook.',
         })),
       ],
     },

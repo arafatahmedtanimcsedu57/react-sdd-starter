@@ -24,10 +24,9 @@ const problems = checkEnvironment({
   engines: JSON.parse(read('package.json')).engines?.node,
   nvmrc,
   lock: packagesOf('package-lock.json'),
-  // npm's own record of what it installed; missing = never installed (or not by npm).
-  installed: existsSync(join(ROOT, 'node_modules'))
-    ? packagesOf('node_modules/.package-lock.json')
-    : null,
+  nodeModules: existsSync(join(ROOT, 'node_modules')),
+  // npm's own record of what it installed; missing = interrupted, or not installed by npm.
+  installed: packagesOf('node_modules/.package-lock.json'),
 })
 
 if (problems.length) {

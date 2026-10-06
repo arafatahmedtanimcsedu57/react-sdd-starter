@@ -27,6 +27,16 @@ describe('satisfies', () => {
     expect(satisfies('v25.0.0', '>=22 <25')).toBe(false)
   })
 
+  it('accepts a space after the operator, and the remaining comparators', () => {
+    expect(satisfies('v24.0.0', '>= 22')).toBe(true)
+    expect(satisfies('v24.0.0', '>24')).toBe(false)
+    expect(satisfies('v24.0.0', '<=24')).toBe(true)
+    expect(satisfies('v24.0.0', '<24')).toBe(false)
+    expect(satisfies('v0.3.5', '^0.3.1')).toBe(true)
+    expect(satisfies('v0.4.0', '^0.3.1')).toBe(false)
+    expect(satisfies('v25.0.0-nightly20260101', '>=24.15.0')).toBe(true)
+  })
+
   it('refuses ranges it does not understand instead of guessing', () => {
     expect(() => satisfies('v24.0.0', '24.x')).toThrow(/unsupported/)
   })
@@ -48,6 +58,10 @@ describe('findInstallDrift', () => {
     expect(findInstallDrift(lock, installed)).toEqual([])
   })
 
+  it('skips workspace links', () => {
+    expect(findInstallDrift({ 'node_modules/local': { link: true } }, {})).toEqual([])
+  })
+
   it('names missing and outdated packages, skipping optional ones', () => {
     const installed = { 'node_modules/msw': { version: '2.15.0' } }
     expect(findInstallDrift(lock, installed)).toEqual([
@@ -58,7 +72,7 @@ describe('findInstallDrift', () => {
 })
 
 describe('checkEnvironment', () => {
-  const base = { engines: '>=24', nvmrc: '24', lock: {}, installed: {} }
+  const base = { engines: '>=24', nvmrc: '24', lock: {}, nodeModules: true, installed: {} }
 
   it('passes a correct setup', () => {
     expect(checkEnvironment({ ...base, nodeVersion: 'v24.21.0' })).toEqual([])
@@ -71,9 +85,19 @@ describe('checkEnvironment', () => {
   })
 
   it('reports missing node_modules', () => {
-    expect(checkEnvironment({ ...base, nodeVersion: 'v24.21.0', installed: null })).toEqual([
-      'node_modules is missing.\n  FIX: npm ci',
-    ])
+    expect(
+      checkEnvironment({ ...base, nodeVersion: 'v24.21.0', nodeModules: false, installed: null }),
+    ).toEqual(['node_modules is missing.\n  FIX: npm ci'])
+  })
+
+  it('reports a node_modules that npm did not finish installing', () => {
+    const [problem] = checkEnvironment({ ...base, nodeVersion: 'v24.21.0', installed: null })
+    expect(problem).toMatch(/not installed by npm.*\n {2}FIX: npm ci/)
+  })
+
+  it('reports an engines range it cannot read instead of throwing', () => {
+    const [problem] = checkEnvironment({ ...base, nodeVersion: 'v24.21.0', engines: '24.x' })
+    expect(problem).toMatch(/engines "24\.x" is not understood.*\n {2}FIX:/)
   })
 
   it('caps a long drift list at five lines', () => {
@@ -91,5 +115,6 @@ describe('nvmrcMismatch', () => {
     expect(nvmrcMismatch('v22.22.2', '24')).toMatch(/\.nvmrc pins 24/)
     expect(nvmrcMismatch('v22.22.2', 'lts/*')).toBeNull()
     expect(nvmrcMismatch('v22.22.2', null)).toBeNull()
+    expect(nvmrcMismatch('v22.22.2', '24.x')).toBeNull()
   })
 })

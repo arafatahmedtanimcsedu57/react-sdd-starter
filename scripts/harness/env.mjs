@@ -46,6 +46,7 @@ export function satisfies(version, range) {
   return range.split('||').some((alternative) =>
     alternative
       .trim()
+      .replace(/([<>=^~]+)\s+/g, '$1') // ">= 22" means ">=22"
       .split(/\s+(?=[\^~<>=\d])/)
       .every((comparator) => satisfiesComparator(version, comparator)),
   )
@@ -69,9 +70,18 @@ export function findInstallDrift(lockPackages, installedPackages) {
 }
 
 /** Problems that stop the harness from running, each with a FIX line. Empty = ready. */
-export function checkEnvironment({ nodeVersion, engines, nvmrc, lock, installed }) {
+export function checkEnvironment({ nodeVersion, engines, nvmrc, lock, nodeModules, installed }) {
   const problems = []
-  if (engines && !satisfies(nodeVersion, engines)) {
+  let nodeOk = true
+  try {
+    nodeOk = !engines || satisfies(nodeVersion, engines)
+  } catch (error) {
+    problems.push(
+      `package.json engines "${engines}" is not understood (${error.message}).\n` +
+        '  FIX: write it with ^ ~ >= > <= < and ||, or extend scripts/harness/env.mjs.',
+    )
+  }
+  if (!nodeOk) {
     const pinned = nvmrc ? ` (.nvmrc: ${nvmrc})` : ''
     problems.push(
       `Node ${nodeVersion} does not satisfy package.json engines "${engines}"${pinned}.\n` +
@@ -79,8 +89,12 @@ export function checkEnvironment({ nodeVersion, engines, nvmrc, lock, installed 
         '  restart Claude Code — hooks run with the Node it was started with.',
     )
   }
-  if (!installed) {
+  if (!nodeModules) {
     problems.push('node_modules is missing.\n  FIX: npm ci')
+  } else if (!installed) {
+    problems.push(
+      'node_modules was not installed by npm (no node_modules/.package-lock.json).\n  FIX: npm ci',
+    )
   } else if (lock) {
     const drift = findInstallDrift(lock, installed)
     if (drift.length) {
@@ -97,7 +111,10 @@ export function checkEnvironment({ nodeVersion, engines, nvmrc, lock, installed 
 /** A warning, not a failure: engines may allow more than the one version .nvmrc pins. */
 export function nvmrcMismatch(nodeVersion, nvmrc) {
   if (!nvmrc || /^(lts|node)/i.test(nvmrc)) return null
-  return satisfies(nodeVersion, nvmrc.replace(/^v/, ''))
-    ? null
-    : `Node ${nodeVersion} is allowed, but .nvmrc pins ${nvmrc} (what CI uses). \`nvm use\` to match.`
+  try {
+    if (satisfies(nodeVersion, nvmrc.replace(/^v/, ''))) return null
+  } catch {
+    return null // an .nvmrc we can't read (e.g. "24.x") is nvm's business, not a failure
+  }
+  return `Node ${nodeVersion} is allowed, but .nvmrc pins ${nvmrc} (what CI uses). \`nvm use\` to match.`
 }
