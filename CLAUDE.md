@@ -18,7 +18,7 @@ Authoritative rules for this repo. Claude reads this every session — follow it
 - Typecheck: `npm run typecheck` · Lint: `npm run lint` · Doctor: `npm run doctor`
 - Test: `npm run test` · Coverage: `npm run test:coverage` · E2E: `npm run test:e2e`
 - Harness: `npm run ready` · `npm run features` · `npm run progress` · `npm run scope` ·
-  `npm run harness:check`
+  `npm run harness:check` · `npm run clock-out` · `npm run trace` (what the hooks ran)
 - All gates (definition of done): `npm run check`
 
 Hooks already run prettier + eslint + typecheck after every edit, and the scope check,
@@ -48,7 +48,8 @@ Every session starts with no memory. The repo is the memory.
   (what, why, what you rejected).
 - **Clock out** (before you stop, even mid-change): `npm run check` green or its failure
   written down; `npm run progress`; update `PROGRESS.md` → Current work, Known issues,
-  Next step; no debug code or stray files left; commit on the feature branch.
+  Next step; commit on the feature branch; then `npm run clock-out` must pass (no junk or
+  debug leftovers, `PROGRESS.md` current, tree committed — `-- --fix` deletes junk files).
 
 ## Feature list
 

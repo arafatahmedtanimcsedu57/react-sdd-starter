@@ -7,5 +7,7 @@ coverage
 blob-report
 *.tsbuildinfo
 .claude/settings.local.json
+# Hook / verify run log, read with `npm run trace` (local evidence, not history)
+.claude/traces/
 # Local cache of the impeccable design plugin (per machine)
 .impeccable/

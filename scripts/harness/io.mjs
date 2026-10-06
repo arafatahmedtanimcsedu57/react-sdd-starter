@@ -1,8 +1,15 @@
 // File, git and process helpers shared by the harness CLIs. Logic lives in lib.mjs.
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs'
 import { join } from 'node:path'
-import { parseFeatureList } from './lib.mjs'
+import { parseFeatureList, renderProgressBlock, summariseTasks } from './lib.mjs'
 
 export const ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], {
   encoding: 'utf8',
@@ -11,6 +18,10 @@ export const path = (rel) => join(ROOT, rel)
 
 export const FEATURES = 'features.json'
 export const LEDGER = 'features.ledger.jsonl'
+export const PROGRESS = 'PROGRESS.md'
+// One JSON line per hook step / verify command, per UTC day. Gitignored: local evidence,
+// not history. The hooks write the same shape from .claude/hooks/trace.sh.
+export const TRACES = '.claude/traces'
 
 // Bookkeeping any feature may touch, on top of its own scope.
 export const ALWAYS_IN_SCOPE = [
@@ -106,4 +117,56 @@ export function changedFiles() {
     git('ls-files', '--others', '--exclude-standard'),
   ]
   return [...new Set(lists.join('\n').split('\n').filter(Boolean))].sort()
+}
+
+const CHANGES = 'openspec/changes'
+
+function openChanges() {
+  if (!existsSync(path(CHANGES))) return []
+  return readdirSync(path(CHANGES), { withFileTypes: true })
+    .filter((d) => d.isDirectory() && d.name !== 'archive')
+    .filter((d) => existsSync(path(`${CHANGES}/${d.name}/tasks.md`)))
+    .map((d) => ({
+      name: d.name,
+      ...summariseTasks(readFileSync(path(`${CHANGES}/${d.name}/tasks.md`), 'utf8')),
+    }))
+}
+
+/** PROGRESS.md's generated block, from the repo's real state right now. */
+export function buildProgressBlock() {
+  return renderProgressBlock({
+    date: new Date().toISOString().slice(0, 10),
+    branch: git('rev-parse', '--abbrev-ref', 'HEAD') || 'unknown',
+    features: readList(),
+    changes: openChanges(),
+  })
+}
+
+/** Records one step. Tracing must never break the thing it traces, so errors are dropped. */
+export function appendTrace(entry) {
+  const at = new Date().toISOString()
+  try {
+    mkdirSync(path(TRACES), { recursive: true })
+    appendFileSync(
+      path(`${TRACES}/${at.slice(0, 10)}.jsonl`),
+      `${JSON.stringify({ at, ...entry })}\n`,
+    )
+  } catch {
+    // no trace is better than a failed verify
+  }
+}
+
+export function readTraces(day) {
+  const file = path(`${TRACES}/${day}.jsonl`)
+  if (!existsSync(file)) return []
+  return readFileSync(file, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .flatMap((line) => {
+      try {
+        return [JSON.parse(line)]
+      } catch {
+        return [] // a half-written line from a killed hook
+      }
+    })
 }
