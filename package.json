@@ -18,13 +18,14 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "doctor": "react-doctor --scope changed --include-untracked --no-score",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm run harness:check && npm run test:coverage && npm run doctor",
+    "check": "npm run ready && npm run typecheck && npm run lint && npm run format:check && npm run harness:check && npm run test:coverage && npm run doctor",
     "gen:api": "rtk-query-codegen-openapi openapi-config.ts",
     "mocks:init": "msw init public/ --save",
     "test:coverage": "vitest run --coverage",
     "features": "node scripts/harness/features.mjs",
     "progress": "node scripts/harness/progress.mjs",
     "scope": "node scripts/harness/scope.mjs",
+    "ready": "node scripts/harness/ready.mjs",
     "harness:check": "node scripts/harness/features.mjs check && node scripts/harness/instructions.mjs"
   },
   "dependencies": {

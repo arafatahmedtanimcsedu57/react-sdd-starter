@@ -16,6 +16,27 @@ Format:
 
 ---
 
+## 2026-10-06: Project rules run as ESLint `no-restricted-syntax`, each message with a FIX
+
+- Why: rules that only live in `CLAUDE.md` get missed; a lint error lands in the same turn
+  (post-edit hook) and its message tells the agent how to fix it. Covers debug `console`,
+  `process.env`, `dangerouslySetInnerHTML`, index keys, `fetch` in UI code, `.only`/`.skip`.
+  `scripts/harness/lint-rules.test.mjs` proves each one fires and stays quiet on good code.
+- Rejected: `eslint-plugin-react` / `eslint-plugin-vitest` — new dependencies for rules a
+  selector already covers; custom `rh rules` regex scanner — a second linter to maintain.
+- Limit: selectors match names, so `window.fetch` or a loop variable named `n` as a key slip
+  through. Review still matters.
+
+## 2026-10-06: `npm run ready` checks the environment before anything else runs
+
+- Why: a session ended with the Stop hook crashing on `Cannot find package 'zod'` — the
+  real causes were Node 20 (engines wants 22/24) and no `node_modules`. `ready.mjs` imports
+  only `node:` built-ins, so it explains the problem even when nothing is installed. The Stop
+  hook and `npm run check` run it first; the post-edit hook runs it only after a failure.
+- Rejected: `engine-strict` in `.npmrc` — only guards `npm install`, not hooks; comparing
+  mtimes of the lockfiles — a branch switch touches them without changing anything.
+- Note: hooks inherit Claude Code's Node. After fixing Node, restart Claude Code.
+
 ## 2026-10-05: Feature state lives in `features.json`, changed only by `npm run features`
 
 - Why: `features.md` is prose for humans; scripts and agents need a list they can read
