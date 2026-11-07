@@ -25,24 +25,23 @@ Things that affect everyone. Add, don't rewrite.
 
 ### Current work
 
-- `chore/team-orchestrator` (slice 3 of `team-orchestration`, Gate 1 approved):
-  `/orchestrate`, `task-worker` agent, `npm run board`, push guard for `@{push}` / `-C`.
-  Dry run: a worker drafted a change in its worktree and stopped at Gate 1; the board
-  showed it. react-reviewer FAIL → fixed → PASS. PR open; over the size limit.
-- Next slice: 4 `team-cross-review` (CI approver ≠ author, CODEOWNERS, `TEAM.md`).
+- `chore/team-cross-review` (slice 4 of `team-orchestration`, Gate 1 approved): `npm run
+team:check`, `TEAM.md`, CODEOWNERS for both developers, PR size excludes `*.test.mjs`.
+  react-reviewer PASS (its 4 strongly-recommended fixes applied). PR open. This completes
+  the four slices of `team-orchestration`.
 - Harness gaps 3 + 4 (enforced clock-out + junk check; trace of hook/verify runs) still open;
   `.claude/traces/` is untracked and was left alone.
 
 ### Known issues
 
-- `.github/workflows/pr-size.yml` excludes `*.test.ts(x)` but not `*.test.mjs`, so harness
-  tests count toward the 400-line limit. Fix is a one-line CI change; needs a human OK.
-- `guard-bash.sh` still can't see a bare `git push` after `cd <other checkout> &&` (it
-  reads the command's `cwd`, not a `cd` inside it). Branch protection is the backstop;
-  the orchestrator always pushes with `git -C <worktree> push -u origin <branch>`.
+- **`master` is not protected** (`npm run team:check`: 9 of 10 rules missing). Until it is,
+  Gate 2 isn't enforced on GitHub. Order: add the teammate as a collaborator → add them to
+  every CODEOWNERS line and merge → run the command in `TEAM.md` §6.
+- `guard-bash.sh` still can't see a bare `git push` after `cd <other checkout> &&`;
+  branch protection is the backstop once it's on.
 - Not yet run for real: a full feature through `/orchestrate` (only the Gate 1 dry run).
 
 ### Next step
 
-- Human: review the slice-3 PR, add `large-pr-approved`, merge. Then slice 4
-  `team-cross-review` on its own branch — or first try `/orchestrate` on a real feature.
+- Human: review + merge the slice-4 PR; add the teammate (TEAM.md §1); turn on protection
+  (§6); `npm run team:check` green. Then the first real feature through `/orchestrate`.

@@ -541,19 +541,24 @@ export function renderBoard(board, { maxWorkers, featureTitles = {} }) {
 export const REQUIRED_CHECKS = ['approvals', 'node-22', 'quality', 'size']
 export const CODEOWNER_PLACEHOLDER = '@teammate-github-username'
 
-/** Unique owners named in a CODEOWNERS file (users and @org/team), comments ignored. */
+/**
+ * CODEOWNERS rules, one per line: `{ pattern, owners }`. Owners are `@user`, `@org/team` or
+ * an email. GitHub uses only the LAST matching line for a file, so each line must stand on
+ * its own.
+ */
 export function parseCodeowners(text) {
-  const owners = String(text)
+  return String(text)
     .split('\n')
     .map((line) => line.replace(/#.*/, '').trim())
     .filter(Boolean)
-    .flatMap((line) => line.split(/\s+/).slice(1))
-    .filter((o) => o.startsWith('@'))
-  return [...new Set(owners)]
+    .map((line) => {
+      const [pattern, ...rest] = line.split(/\s+/)
+      return { pattern, owners: rest.filter((o) => o.includes('@')) }
+    })
 }
 
 /** Every rule the harness relies on, each `{ rule, ok, fix }`. */
-export function checkTeamSetup({ branch, protection, collaborators, owners }) {
+export function checkTeamSetup({ branch, protection, collaborators, codeowners }) {
   const p = protection ?? {}
   const reviews = p.required_pull_request_reviews ?? {}
   const checks = new Set([
@@ -561,10 +566,13 @@ export function checkTeamSetup({ branch, protection, collaborators, owners }) {
     ...(p.required_status_checks?.checks ?? []).map((c) => c.context),
   ])
   const missingChecks = REQUIRED_CHECKS.filter((c) => !checks.has(c))
-  const people = owners.filter((o) => !o.includes('/'))
-  const strangers = people.filter(
-    (o) => o !== CODEOWNER_PLACEHOLDER && !collaborators.includes(o.slice(1)),
+  // A team or an email counts as one owner; a line needs two, or its author has no reviewer.
+  const thin = codeowners.filter(
+    (l) => l.owners.filter((o) => o !== CODEOWNER_PLACEHOLDER).length < 2,
   )
+  const writers = new Set(collaborators.map((c) => c.toLowerCase()))
+  const users = [...new Set(codeowners.flatMap((l) => l.owners).filter((o) => /^@[^/]+$/.test(o)))]
+  const strangers = users.filter((o) => !writers.has(o.slice(1).toLowerCase()))
   const setting = (what) => `in Settings → Branches → ${branch}: ${what}`
   return [
     {
@@ -610,14 +618,16 @@ export function checkTeamSetup({ branch, protection, collaborators, owners }) {
       fix: setting('leave "allow force pushes" and "allow deletions" off'),
     },
     {
-      rule: 'CODEOWNERS names two or more people, no placeholder',
-      ok: people.length >= 2 && !owners.includes(CODEOWNER_PLACEHOLDER),
-      fix: `put both developers' GitHub usernames in .github/CODEOWNERS (replace ${CODEOWNER_PLACEHOLDER})`,
+      rule: `every CODEOWNERS line on ${branch} names two or more owners`,
+      ok: codeowners.length > 0 && thin.length === 0,
+      fix: codeowners.length
+        ? `give these lines a second owner on ${branch}: ${thin.map((l) => l.pattern).join(', ')}`
+        : `add .github/CODEOWNERS with both developers to ${branch} (merge it before protection)`,
     },
     {
-      rule: 'every code owner is a collaborator',
+      rule: 'every code owner can push (a collaborator with write access)',
       ok: strangers.length === 0,
-      fix: `add ${strangers.join(', ') || 'them'} in Settings → Collaborators (write access)`,
+      fix: `add ${strangers.join(', ')} in Settings → Collaborators with write access`,
     },
   ]
 }

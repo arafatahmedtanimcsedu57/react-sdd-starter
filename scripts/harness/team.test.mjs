@@ -21,7 +21,10 @@ const facts = (over = {}) => ({
   branch: 'master',
   protection,
   collaborators: ['me', 'x'],
-  owners: ['@me', '@x'],
+  codeowners: [
+    { pattern: '*', owners: ['@me', '@x'] },
+    { pattern: '/src/', owners: ['@x', '@me'] },
+  ],
   ...over,
 })
 const failing = (f) =>
@@ -30,9 +33,13 @@ const failing = (f) =>
     .map((r) => r.rule)
 
 describe('parseCodeowners', () => {
-  it('collects unique owners, ignoring comments and paths', () => {
-    const text = '# who\n*  @me @x\n/openspec/ @me # specs\n/src/ @org/frontend\n\n'
-    expect(parseCodeowners(text)).toEqual(['@me', '@x', '@org/frontend'])
+  it('reads each line with its owners: users, teams and emails, ignoring comments', () => {
+    const text = '# who\n*  @me @x\n/openspec/ @me # specs\n/src/ @org/frontend a@b.co\n\n'
+    expect(parseCodeowners(text)).toEqual([
+      { pattern: '*', owners: ['@me', '@x'] },
+      { pattern: '/openspec/', owners: ['@me'] },
+      { pattern: '/src/', owners: ['@org/frontend', 'a@b.co'] },
+    ])
   })
 })
 
@@ -82,15 +89,34 @@ describe('checkTeamSetup', () => {
     ).toEqual(['no force pushes or deletion'])
   })
 
-  it('needs two real code owners who are collaborators', () => {
-    expect(failing(facts({ owners: ['@me'] }))).toEqual([
-      'CODEOWNERS names two or more people, no placeholder',
+  it('needs two owners on every line — GitHub uses only the last matching line', () => {
+    const codeowners = [
+      { pattern: '*', owners: ['@me', '@x'] },
+      { pattern: '/src/', owners: ['@me'] },
+    ]
+    const row = checkTeamSetup(facts({ codeowners })).find((r) => !r.ok)
+    expect(row.rule).toBe('every CODEOWNERS line on master names two or more owners')
+    expect(row.fix).toMatch(/\/src\//)
+    expect(failing(facts({ codeowners: [] }))).toEqual([
+      'every CODEOWNERS line on master names two or more owners',
     ])
-    expect(failing(facts({ owners: ['@me', CODEOWNER_PLACEHOLDER] }))).toEqual([
-      'CODEOWNERS names two or more people, no placeholder',
-    ])
-    const stranger = checkTeamSetup(facts({ owners: ['@me', '@y'] })).find((r) => !r.ok)
-    expect(stranger).toMatchObject({ rule: 'every code owner is a collaborator' })
-    expect(stranger.fix).toMatch(/add @y/)
+    const placeholder = [{ pattern: '*', owners: ['@me', CODEOWNER_PLACEHOLDER] }]
+    expect(failing(facts({ codeowners: placeholder }))).toContain(
+      'every CODEOWNERS line on master names two or more owners',
+    )
+  })
+
+  it('counts a team or an email as an owner', () => {
+    const codeowners = [{ pattern: '*', owners: ['@me', '@org/frontend', 'x@y.z'] }]
+    expect(failing(facts({ codeowners }))).toEqual([])
+  })
+
+  it('needs every user owner to have push access, compared case-insensitively', () => {
+    const codeowners = [{ pattern: '*', owners: ['@Me', '@y'] }]
+    const row = checkTeamSetup(facts({ codeowners })).find((r) => !r.ok)
+    expect(row).toMatchObject({
+      rule: 'every code owner can push (a collaborator with write access)',
+    })
+    expect(row.fix).toMatch(/add @y in/)
   })
 })

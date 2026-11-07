@@ -11,8 +11,8 @@ read branch protection). `/orchestrate` runs it at clock-in.
 ## 1. Access (repo admin, once per teammate)
 
 1. Settings → Collaborators → add the teammate with **write** access.
-2. Put their GitHub username in `.github/CODEOWNERS`, replacing
-   `@teammate-github-username`, in a PR the other developer reviews.
+2. Add their GitHub username to **every** line of `.github/CODEOWNERS` (GitHub uses only
+   the last matching line per file, so each line needs both of you), and merge it.
 3. Then turn on branch protection (section 6). **Not before** — with code-owner review
    required and only one real owner, nobody can approve that owner's PRs.
 
@@ -58,6 +58,13 @@ What `npm run team:check` expects on the default branch: required checks `approv
 dismissed on new pushes; approval of the most recent push; administrators included; no
 force pushes, no deletion.
 
+`strict` is off on purpose: with it on, every time `master` moves the author must update
+their branch, and that push dismisses the teammate's approval — two developers end up
+re-approving in a loop. CI still runs on each PR's merge with `master`. `enforce_admins`
+is on: nobody, the admin included, merges without the other's review — no hotfix bypass
+while a teammate is away (turn it off only as a deliberate team decision). `team:check`
+reads classic branch protection only; a ruleset-protected repo shows as unprotected.
+
 Run this in **your own terminal** (Claude's guard blocks protection changes on purpose),
 replacing `OWNER/REPO` and `master` if needed:
 
@@ -65,7 +72,7 @@ replacing `OWNER/REPO` and `master` if needed:
 gh api -X PUT repos/OWNER/REPO/branches/master/protection --input - <<'JSON'
 {
   "required_status_checks": {
-    "strict": true,
+    "strict": false,
     "checks": [
       { "context": "approvals" },
       { "context": "node-22" },

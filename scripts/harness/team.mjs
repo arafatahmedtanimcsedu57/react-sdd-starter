@@ -1,11 +1,12 @@
 // Is Gate 2 actually enforced on GitHub? Read-only: gathers the default branch's
-// protection, the collaborators and CODEOWNERS with `gh`, then checks every rule the harness
+// protection, the collaborators with push access and the default branch's CODEOWNERS (the
+// copy GitHub uses — not this working tree's) with `gh`, then checks every rule the harness
 // relies on (lib.mjs → checkTeamSetup). Not part of `npm run check`: CI tokens can't read
 // branch protection. `/orchestrate` runs it at clock-in.
+import { Buffer } from 'node:buffer'
 import { spawnSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
 import { checkTeamSetup, parseCodeowners } from './lib.mjs'
-import { fail, path } from './io.mjs'
+import { fail } from './io.mjs'
 
 function gh(...args) {
   const run = spawnSync('gh', args, { encoding: 'utf8' })
@@ -16,23 +17,38 @@ function gh(...args) {
 const repo = gh('repo', 'view', '--json', 'nameWithOwner,defaultBranchRef')
 if (!repo.ok) fail(`could not read the repo: ${repo.err}`)
 const { nameWithOwner, defaultBranchRef } = JSON.parse(repo.out)
-const branch = defaultBranchRef.name
+const branch = defaultBranchRef?.name ?? fail(`${nameWithOwner} has no default branch yet.`)
+const ref = encodeURIComponent(branch)
 
-const prot = gh('api', `repos/${nameWithOwner}/branches/${branch}/protection`)
+// Only "Branch not protected" means unprotected; any other 404 / 403 means we can't tell.
+const prot = gh('api', `repos/${nameWithOwner}/branches/${ref}/protection`)
 let protection = null
 if (prot.ok) protection = JSON.parse(prot.out)
-else if (!/Branch not protected|HTTP 404/.test(prot.err)) {
+else if (!/Branch not protected/.test(prot.err)) {
   fail(`could not read ${branch}'s protection (needs admin access): ${prot.err}`)
 }
 
-const collab = gh('api', `repos/${nameWithOwner}/collaborators`, '--jq', '.[].login')
+// GitHub ignores code owners without write access.
+const collab = gh(
+  'api',
+  '--paginate',
+  `repos/${nameWithOwner}/collaborators`,
+  '--jq',
+  '.[] | select(.permissions.push) | .login',
+)
 if (!collab.ok) fail(`could not list collaborators: ${collab.err}`)
 const collaborators = collab.out.split('\n').filter(Boolean)
 
-const codeowners = path('.github/CODEOWNERS')
-const owners = existsSync(codeowners) ? parseCodeowners(readFileSync(codeowners, 'utf8')) : []
+const file = gh(
+  'api',
+  `repos/${nameWithOwner}/contents/.github/CODEOWNERS?ref=${ref}`,
+  '--jq',
+  '.content',
+)
+if (!file.ok && !/Not Found|HTTP 404/.test(file.err)) fail(`could not read CODEOWNERS: ${file.err}`)
+const codeowners = file.ok ? parseCodeowners(Buffer.from(file.out, 'base64').toString('utf8')) : []
 
-const rows = checkTeamSetup({ branch, protection, collaborators, owners })
+const rows = checkTeamSetup({ branch, protection, collaborators, codeowners })
 for (const r of rows) {
   console.log(r.ok ? `✓ ${r.rule}` : `✗ ${r.rule}\n  FIX (repo admin): ${r.fix}`)
 }
