@@ -326,11 +326,29 @@ export function checkProgressDoc(text) {
  */
 export function ownSection(doc, email) {
   const lines = String(doc).split('\n')
-  const start = lines.findIndex((l) => l.trim() === `## ${email}`)
+  const heading = `## ${email}`.toLowerCase()
+  const start = lines.findIndex((l) => l.trim().toLowerCase() === heading)
   if (start === -1) return null
   const rest = lines.slice(start + 1)
   const end = rest.findIndex((l) => /^## /.test(l))
   return (end === -1 ? rest : rest.slice(0, end)).join(' ').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Clock-out's PROGRESS.md rule, or null when it holds. `now` / `before` are the caller's
+ * section today and at the fork point (null = no section). Nothing changed → nothing to
+ * hand off; on the default branch only the commit check applies.
+ */
+export function progressProblem({ changed, now, before, onDefault, email }) {
+  if (!email) return 'git has no user.email.\nFIX: git config user.email you@example.com'
+  if (!changed.length) return null
+  if (now === null) {
+    return `PROGRESS.md has no section for you.\nFIX: add "## ${email}" with Current work, Known issues, Next step.`
+  }
+  if (!onDefault && before !== null && before === now) {
+    return `This branch changes files but not your PROGRESS.md section.\nFIX: update Current work, Known issues and Next step under "## ${email}".`
+  }
+  return null
 }
 
 // Untracked files a session typically leaves behind. `clock-out --fix` deletes these, and git

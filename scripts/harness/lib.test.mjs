@@ -12,6 +12,7 @@ import {
   formatTrace,
   ownSection,
   parseTraceLines,
+  progressProblem,
   parseFeatureList,
   proposalFeature,
   renderProgress,
@@ -478,6 +479,10 @@ describe('ownSection', () => {
     expect(ownSection(doc, 'x@example.com')).toBe('- y')
   })
 
+  it('matches the heading whatever the case of the email', () => {
+    expect(ownSection('## Me@Example.com\n- a\n', 'me@example.com')).toBe('- a')
+  })
+
   it('is null for a developer without a section', () => {
     expect(ownSection(doc, 'new@example.com')).toBeNull()
   })
@@ -548,5 +553,44 @@ describe('parseTraceLines / formatTrace', () => {
       '09:00:00  feat/f03/a  stop-hook/scope  ok       5ms',
       '09:00:01  master      stop-hook/scope  ✗1       6ms',
     ])
+  })
+})
+
+describe('progressProblem', () => {
+  const base = {
+    changed: ['src/a.ts'],
+    now: 'next: x',
+    before: 'next: y',
+    onDefault: false,
+    email: 'me@x.y',
+  }
+
+  it('passes when your section changed on a branch that changes files', () => {
+    expect(progressProblem(base)).toBeNull()
+  })
+
+  it('fails when your section is the same as at the fork point', () => {
+    expect(progressProblem({ ...base, now: 'same', before: 'same' })).toMatch(
+      /not your PROGRESS.md section/,
+    )
+  })
+
+  it('fails when only PROGRESS.md changed but not your section', () => {
+    const onlyProgress = { ...base, changed: ['PROGRESS.md'], now: 'same', before: 'same' }
+    expect(progressProblem(onlyProgress)).toMatch(/under "## me@x.y"/)
+  })
+
+  it('fails without a section, and without a git email', () => {
+    expect(progressProblem({ ...base, now: null })).toMatch(/no section for you/)
+    expect(progressProblem({ ...base, email: '' })).toMatch(/user.email/)
+  })
+
+  it('passes a section added on this branch, and anything when nothing changed', () => {
+    expect(progressProblem({ ...base, before: null })).toBeNull()
+    expect(progressProblem({ ...base, changed: [], now: null })).toBeNull()
+  })
+
+  it('on the default branch only asks that a section exists (the commit check does the rest)', () => {
+    expect(progressProblem({ ...base, onDefault: true, now: 'same', before: 'same' })).toBeNull()
   })
 })

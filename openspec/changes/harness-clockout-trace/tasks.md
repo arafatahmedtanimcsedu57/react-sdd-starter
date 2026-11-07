@@ -24,6 +24,6 @@ Estimated reviewable lines: ~380 (most of it ported from `chore/harness-clockout
 
 - [x] 4.1 `CLAUDE.md` clock-out line + Commands line; `DECISIONS.md` entries (crediting #24)
 - [x] 4.2 `npm run clock-out` on this branch: ✗ until PROGRESS + commit, then ✓
-- [ ] 4.3 `npm run check` green; react-reviewer PASS
+- [x] 4.3 `npm run check` green; react-reviewer PASS
 
 approved: arafatahmedtanimcsedu57, 2026-11-08

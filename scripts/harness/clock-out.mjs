@@ -8,8 +8,17 @@
 // It never edits code: debug leftovers are reported, not removed.
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, unlinkSync } from 'node:fs'
-import { findJunk, ownSection } from './lib.mjs'
-import { appendTrace, changedFiles, forkPoint, git, me, path, PROGRESS } from './io.mjs'
+import { findJunk, ownSection, progressProblem } from './lib.mjs'
+import {
+  appendTrace,
+  changedFiles,
+  DEFAULT_BRANCH,
+  forkPoint,
+  git,
+  me,
+  path,
+  PROGRESS,
+} from './io.mjs'
 
 const fix = process.argv.includes('--fix')
 const untracked = () =>
@@ -26,13 +35,17 @@ const indent = (text) =>
 
 if (fix) {
   for (const file of findJunk(untracked())) {
-    unlinkSync(path(file))
-    console.log(`  removed ${file}`)
+    try {
+      unlinkSync(path(file))
+      console.log(`  removed ${file}`)
+    } catch (error) {
+      console.error(`  could not remove ${file}: ${error.message}`)
+    }
   }
 }
 
 const branch = git('rev-parse', '--abbrev-ref', 'HEAD')
-const onDefault = /^(main|master)$/.test(branch)
+const onDefault = DEFAULT_BRANCH.test(branch)
 const changed = changedFiles()
 const email = me()
 
@@ -69,25 +82,23 @@ const checks = [
   [
     'your PROGRESS.md section saved',
     () => {
-      if (!email) return 'git has no user.email.\nFIX: git config user.email you@example.com'
       if (!existsSync(path(PROGRESS))) return `${PROGRESS} is missing.`
-      // Nothing changed (e.g. an orchestrator session on the default branch): nothing to hand off.
-      if (!changed.length) return null
-      const now = ownSection(readFileSync(path(PROGRESS), 'utf8'), email)
-      if (now === null) {
-        return `${PROGRESS} has no section for you.\nFIX: add "## ${email}" with Current work, Known issues, Next step.`
-      }
-      const before = onDefault ? null : git('show', `${forkPoint()}:${PROGRESS}`)
-      if (before && ownSection(before, email) === now) {
-        return `This branch changes files but not your ${PROGRESS} section.\nFIX: update Current work, Known issues and Next step under "## ${email}".`
-      }
-      return null
+      const before = onDefault ? '' : git('show', `${forkPoint()}:${PROGRESS}`)
+      return progressProblem({
+        changed,
+        now: ownSection(readFileSync(path(PROGRESS), 'utf8'), email),
+        before: before ? ownSection(before, email) : null,
+        onDefault,
+        email,
+      })
     },
   ],
   [
     'committed on a feature branch',
     () => {
       const dirty = git('status', '--porcelain')
+      if (branch === 'HEAD')
+        return 'Detached HEAD.\nFIX: git switch -c <type>/<name>, then commit there.'
       if (onDefault) {
         return dirty
           ? `On ${branch} with uncommitted changes:\n${dirty}\nFIX: git switch -c <type>/<name>, then commit there.`

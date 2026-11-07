@@ -14,15 +14,12 @@ export const PROGRESS = 'PROGRESS.md'
 // One JSON line per hook / verify / clock-out step, per UTC day, in the MAIN checkout (the
 // parent of the .git all worktrees share), so a worker worktree's steps outlive it.
 // Gitignored: local evidence, not history. .claude/hooks/trace.sh writes the same shape.
-export const TRACES = join(
-  dirname(
-    execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], {
-      cwd: ROOT,
-      encoding: 'utf8',
-    }).trim(),
-  ),
-  '.claude/traces',
-)
+// Resolved when used (inside the callers' error handling), not at import: every harness CLI
+// imports this file, and `--path-format` needs git ≥ 2.31.
+export function tracesDir() {
+  const common = git('rev-parse', '--path-format=absolute', '--git-common-dir')
+  return common.startsWith('/') ? join(dirname(common), '.claude/traces') : path('.claude/traces')
+}
 
 export const FEATURES = 'features.json'
 export const LEDGER = 'features.ledger.jsonl'
@@ -127,7 +124,7 @@ export function forkPoint() {
   return 'HEAD'
 }
 
-const DEFAULT_BRANCH = /^(main|master)$/
+export const DEFAULT_BRANCH = /^(main|master)$/
 
 /**
  * Files changed on this branch: committed since the fork point, staged, unstaged, untracked,
@@ -147,10 +144,11 @@ export function changedFiles() {
 export function appendTrace(entry) {
   const at = new Date().toISOString()
   try {
-    mkdirSync(TRACES, { recursive: true })
+    const dir = tracesDir()
+    mkdirSync(dir, { recursive: true })
     const branch = git('rev-parse', '--abbrev-ref', 'HEAD')
     appendFileSync(
-      join(TRACES, `${at.slice(0, 10)}.jsonl`),
+      join(dir, `${at.slice(0, 10)}.jsonl`),
       `${JSON.stringify({ at, ...(branch ? { branch } : {}), ...entry })}\n`,
     )
   } catch {
@@ -159,6 +157,6 @@ export function appendTrace(entry) {
 }
 
 export function readTraces(day) {
-  const file = join(TRACES, `${day}.jsonl`)
+  const file = join(tracesDir(), `${day}.jsonl`)
   return existsSync(file) ? parseTraceLines(readFileSync(file, 'utf8')) : []
 }

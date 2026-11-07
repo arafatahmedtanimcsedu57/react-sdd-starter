@@ -13,9 +13,12 @@ _trace_now() {
 }
 
 # The main checkout is the parent of the .git every worktree shares; outside git: here.
+# (Repos with --separate-git-dir or submodules would trace inside .git — fine for this template.)
 _trace_dir() {
   local common
-  if common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+  # git < 2.31 echoes the unknown --path-format back; only trust an absolute path.
+  if common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) &&
+    [[ $common == /* && $common != *$'\n'* ]]; then
     printf '%s/.claude/traces' "$(dirname "$common")"
   else
     printf '.claude/traces'

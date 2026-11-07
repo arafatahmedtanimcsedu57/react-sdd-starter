@@ -7,11 +7,11 @@ input=$(cat)
 file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
 { [ -z "$file" ] || [ ! -f "$file" ]; } && exit 0
 . "$(dirname "$0")/lib.sh"
+# shellcheck source=trace.sh
+. "$(dirname "$0")/trace.sh" # before the cd: $0 may be relative
 cd "$(repo_root "$(dirname "$file")")" || exit 0
 TRACE_SESSION=$(printf '%s' "$input" | jq -r '.session_id // empty')
 TRACE_DETAIL=${file#"$(pwd -P)"/}
-# shellcheck source=trace.sh
-. "$(dirname "$0")/trace.sh"
 
 npx --no-install prettier --write --ignore-unknown --log-level warn "$file" >/dev/null 2>&1
 

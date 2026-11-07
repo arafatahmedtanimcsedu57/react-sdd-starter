@@ -7,6 +7,8 @@ set -u
 input=$(cat)
 [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false')" = "true" ] && exit 0
 . "$(dirname "$0")/lib.sh"
+# shellcheck source=trace.sh
+. "$(dirname "$0")/trace.sh" # before the cd: $0 may be relative
 cd "$(repo_root "$(printf '%s' "$input" | jq -r '.cwd // empty')")" || exit 0
 
 # SubagentStop also fires for read-only helpers (react-reviewer, codebase-explorer) that run
@@ -17,8 +19,6 @@ if [ "$(printf '%s' "$input" | jq -r '.hook_event_name // empty')" = SubagentSto
   exit 0
 fi
 TRACE_SESSION=$(printf '%s' "$input" | jq -r '.session_id // empty')
-# shellcheck source=trace.sh
-. "$(dirname "$0")/trace.sh"
 
 # Wrong Node or stale node_modules makes every later check fail with a misleading stack
 # trace. Say so plainly instead; ready.mjs needs nothing installed to run.
