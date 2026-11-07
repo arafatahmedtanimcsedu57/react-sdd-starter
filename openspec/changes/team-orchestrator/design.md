@@ -39,7 +39,9 @@ board, never touches another task's files.
 ```
 
 Statuses: `planned → drafting → needs-you(gate1) → coding ⇄ needs-you(question) → checking
-→ pr-open → merged → finished`, plus `queued` and `blocked`.
+→ ready → pr-open → merged → finished`, plus `queued` and `blocked`. `ready` = built and
+checked, waiting for the orchestrator's review + PR; `ready` and `pr-open` still hold their
+folders (no new task may touch them) but no longer use a worker slot.
 
 `npm run board` prints (PR state via `gh pr view` when `gh` is available):
 
@@ -83,8 +85,12 @@ A `planned` / `queued` task may start when:
    resumes the worker (SendMessage). "change <task>: …" is relayed instead.
 5. **Build** — worker implements per `tasks.md`; on any decision the spec doesn't settle:
    commit, `STATUS: needs-you | question | <question> — recommended: <answer>`.
-6. **Check + PR** — `npm run check`, the proof command for its part, `react-reviewer` PASS;
-   push; `gh pr create` (reviewer: the other developer); `STATUS: pr-open | <url>`.
+6. **Check** — worker: `npm run check` + its proof part green, commit,
+   `STATUS: ready | - | …`. **Orchestrator** (in the owner's window, where permission
+   prompts appear): `react-reviewer` on the worktree (FAIL → back to the worker), push,
+   `gh pr create` (reviewer: the other developer) → `pr-open`. A subagent can't start
+   another subagent, and a background one can't answer permission prompts — so review,
+   push and PR stay with the orchestrator.
 7. **Merge** — the human merges. Orchestrator marks `merged`, runs `/finish <task>`, removes
    the worktree. When all tasks of a feature are merged: one small **closing PR** with
    `npm run features -- verify F03`.

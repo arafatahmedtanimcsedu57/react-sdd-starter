@@ -63,6 +63,12 @@ while IFS= read -r part; do
     dest=${a##*:} # `src:dst` → dst; a bare name pushes to itself
     [[ $dest =~ $re_default ]] && block "pushing to $dest"
   done
+  # A bare push goes wherever push.default + upstream send it. A worker branch cut from master
+  # may track origin/master, and with push.default=upstream that push lands on master.
+  if ((${#positional[@]} < 2)); then
+    target=$(git rev-parse --abbrev-ref '@{push}' 2>/dev/null || true)
+    [[ -n $target && ${target#*/} =~ $re_default ]] && block "pushing to $target (this branch's push target)"
+  fi
   # From main/master, a push with no branch named (or naming HEAD) targets main/master.
   if [[ $current =~ $re_default ]]; then
     ((${#positional[@]} < 2)) && block "pushing from $current with no target branch"

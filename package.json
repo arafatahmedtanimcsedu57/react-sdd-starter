@@ -23,6 +23,7 @@
     "mocks:init": "msw init public/ --save",
     "test:coverage": "vitest run --coverage",
     "features": "node scripts/harness/features.mjs",
+    "board": "node scripts/harness/board.mjs",
     "progress": "node scripts/harness/progress.mjs",
     "scope": "node scripts/harness/scope.mjs",
     "ready": "node scripts/harness/ready.mjs",
