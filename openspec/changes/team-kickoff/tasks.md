@@ -3,11 +3,11 @@ check and review. Approving this file approves both.
 
 ## A. Roster + identity
 
-- [ ] A.1 `parseTeam`, `whoami`, `isOwner` (`scripts/harness/lib.mjs`) + tests
-- [ ] A.2 `@login` owners in `transition`, `findLedgerAnomalies`, `scopeForBranch`, `features owner --set @login` + tests
-- [ ] A.3 `ownSection` accepts `## @login`; clock-out uses it + tests
-- [ ] A.4 `scripts/harness/team.mjs`: list, `add`, `join`, `codeowners` (keeps `team:check` as `team.mjs check`); `package.json` `team`
-- [ ] A.5 `team.json` with the current owner; CLI test for add / join / codeowners (`scripts/harness/team.cli.test.mjs`)
+- [x] A.1 `parseTeam`, `whoami`, `isOwner` (`scripts/harness/lib.mjs`) + tests
+- [x] A.2 `@login` owners in `transition`, `findLedgerAnomalies`, `scopeForBranch`, `features owner --set @login` + tests
+- [x] A.3 `ownSection` accepts `## @login`; clock-out uses it + tests
+- [x] A.4 `scripts/harness/roster.mjs` (`npm run team`): list, `add`, `join`, `codeowners`; `team:check` stays `team.mjs`
+- [x] A.5 `team.json` with the current owner; CLI test for add / join / codeowners (`scripts/harness/team.cli.test.mjs`)
 - [ ] A.6 `npm run check` green; react-reviewer PASS; PR A
 
 ## B. /kickoff
@@ -18,4 +18,4 @@ check and review. Approving this file approves both.
 - [ ] B.4 Dry run on a throwaway branch: a short sample PRD → draft features + split shown, nothing written until approved; then clean up
 - [ ] B.5 `npm run check` green; react-reviewer PASS; PR B
 
-approved: <pending>
+approved: arafatahmedtanimcsedu57, 2026-11-08

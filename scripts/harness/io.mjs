@@ -2,7 +2,7 @@
 import { execFileSync } from 'node:child_process'
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { parseFeatureList, parseTraceLines, replayFeatures } from './lib.mjs'
+import { loginFor, parseFeatureList, parseTeam, parseTraceLines, replayFeatures } from './lib.mjs'
 
 export const ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], {
   encoding: 'utf8',
@@ -91,11 +91,30 @@ export function me() {
   return git('config', 'user.email')
 }
 
-/** Definitions, ledger and the replayed features (definition + state) in one read. */
+export const TEAM = 'team.json'
+
+/** The roster (team.json); none yet → an empty one. */
+export function readTeam() {
+  if (!existsSync(path(TEAM))) return { version: 1, members: [] }
+  try {
+    return parseTeam(JSON.parse(readFileSync(path(TEAM), 'utf8')))
+  } catch (error) {
+    return fail(error.message)
+  }
+}
+
+/** The caller as `{ email, github? }` — the login only once they've joined the roster. */
+export function whoami(team = readTeam()) {
+  const email = me()
+  return { email, github: loginFor(team, email) }
+}
+
+/** Definitions, ledger, roster and the replayed features (definition + state) in one read. */
 export function readFeatures() {
   const list = readList()
   const ledger = readLedger()
-  return { list, ledger, features: replayFeatures(list, ledger) }
+  const team = readTeam()
+  return { list, ledger, team, features: replayFeatures(list, ledger) }
 }
 
 export function appendLedger(entry) {

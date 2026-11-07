@@ -16,14 +16,69 @@ const proofCommand = z
     message: 'verify may chain steps with && but no other shell syntax (; | $ ` < >)',
   })
 
-const email = z.string().regex(/^[^@\s]+@[^@\s]+$/, 'owner must be a git email (user@host)')
+const EMAIL = /^[^@\s]+@[^@\s]+$/
+const LOGIN = /^[A-Za-z\d](?:[A-Za-z\d-]{0,38})$/ // a GitHub username
+const owner = z
+  .string()
+  .refine((v) => EMAIL.test(v) || (v.startsWith('@') && LOGIN.test(v.slice(1))), {
+    message: 'owner must be a git email (user@host) or a GitHub @login',
+  })
+
+// The roster (team.json): GitHub logins, and each member's git email once THEY run
+// `npm run team -- join`. Owners may be either; the roster links them.
+const teamSchema = z.object({
+  version: z.literal(1),
+  members: z.array(
+    z.object({
+      github: z.string().regex(LOGIN, 'github must be a GitHub username (no @)'),
+      email: z.string().regex(EMAIL, 'email must look like user@host').optional(),
+      name: z.string().optional(),
+    }),
+  ),
+})
+
+export function parseTeam(data) {
+  const result = teamSchema.safeParse(data)
+  if (!result.success) {
+    const issues = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`)
+    throw new Error(`team.json is invalid:\n  ${issues.join('\n  ')}`)
+  }
+  for (const key of ['github', 'email']) {
+    const seen = new Set()
+    for (const m of result.data.members) {
+      const v = m[key]?.toLowerCase()
+      if (!v) continue
+      if (seen.has(v)) throw new Error(`team.json lists ${key} twice: ${m[key]}`)
+      seen.add(v)
+    }
+  }
+  return result.data
+}
+
+/** The GitHub login of the member who joined with `email`, if any. */
+export function loginFor(team, email) {
+  const e = email?.toLowerCase()
+  return e ? team.members.find((m) => m.email?.toLowerCase() === e)?.github : undefined
+}
+
+/** `me` = `{ email, github? }`; a feature's owner is either form. */
+export const asMe = (me) => (typeof me === 'string' ? { email: me } : (me ?? {}))
+export function isOwner(featureOwner, me) {
+  const { email, github } = asMe(me)
+  if (email && featureOwner === email) return true
+  return Boolean(github) && featureOwner.toLowerCase() === `@${github}`.toLowerCase()
+}
+const label = (me) => {
+  const { email, github } = asMe(me)
+  return github ? `@${github}` : email || 'unknown'
+}
 
 // Definitions only. State, attempts and evidence live in features.ledger.jsonl, which merges
 // by union — so two developers' branches never conflict over a feature's state.
 const featureSchema = z.object({
   id: z.string().regex(/^F\d{2,}$/, 'id must look like F01'),
   title: z.string().min(1),
-  owner: email,
+  owner,
   verify: proofCommand,
   scope: z.array(z.string().min(1)).min(1, 'scope needs at least one folder or file'),
   change: z.string().optional(),
@@ -92,17 +147,17 @@ const ALLOWED = {
 export function transition(features, id, to, { me, limits, reason, evidence } = {}) {
   const current = features.find((f) => f.id === id)
   if (!current) throw new Error(`${id} is not in features.json.`)
-  if (current.owner !== me) {
+  if (!isOwner(current.owner, me)) {
     throw new Error(
-      `${id} belongs to ${current.owner}; you are ${me || 'unknown'}. Only its owner moves it — ` +
-        `hand it over first (npm run features -- owner ${id} --set <email>, ask a human).`,
+      `${id} belongs to ${current.owner}; you are ${label(me)}. Only its owner moves it — ` +
+        `hand it over first (npm run features -- owner ${id} --set <@login|email>, ask a human).`,
     )
   }
   if (!ALLOWED[current.state]?.includes(to)) {
     throw new Error(`${id}: ${current.state} → ${to} is not allowed.`)
   }
   if (to === 'active') {
-    const mine = features.filter((f) => f.owner === me && f.state === 'active' && f.id !== id)
+    const mine = features.filter((f) => isOwner(f.owner, me) && f.state === 'active' && f.id !== id)
     if (mine.length >= limits.activePerOwner) {
       throw new Error(
         `You already have ${mine.length} active (${mine.map((f) => f.id).join(', ')}); the limit ` +
@@ -144,7 +199,7 @@ const sameScope = (a, b) => [...a].sort().join('\n') === [...b].sort().join('\n'
  * change or hand-over by someone other than the owner. Lines from before owners existed
  * carry no `by`; once one line has it, every later line must.
  */
-export function findLedgerAnomalies(ledger) {
+export function findLedgerAnomalies(ledger, team = { members: [] }) {
   const problems = []
   const state = {}
   const owner = {}
@@ -154,8 +209,9 @@ export function findLedgerAnomalies(ledger) {
     if (e.by) sawBy = true
     else if (sawBy) problems.push(`${where} has no "by" — written by hand?`)
     const checked = Boolean(e.by)
+    const byOwner = () => isOwner(owner[e.id], { email: e.by, github: loginFor(team, e.by) })
     const notOwner = (what) =>
-      checked && owner[e.id] && e.by !== owner[e.id]
+      checked && owner[e.id] && !byOwner()
         ? [`${where}: ${what} by ${e.by}, not the owner ${owner[e.id]}`]
         : []
 
@@ -190,7 +246,7 @@ export function findLedgerAnomalies(ledger) {
 }
 
 /** Definitions in features.json that the ledger doesn't back up (edited by hand). */
-export function findLedgerDrift(list, ledger) {
+export function findLedgerDrift(list, ledger, team) {
   const defs = replayDefinitions(ledger)
   const known = new Set(ledger.filter((e) => e.to === 'not_started').map((e) => e.id))
   return list.features
@@ -210,7 +266,7 @@ export function findLedgerDrift(list, ledger) {
       if (!recorded.owner) problems.push(`${f.id} has no owner in the ledger`)
       return problems
     })
-    .concat(findLedgerAnomalies(ledger))
+    .concat(findLedgerAnomalies(ledger, team))
 }
 
 const covers = (entry, file) => {
@@ -281,7 +337,7 @@ export function scopeForBranch({ changeFeatures, features, me }) {
   const named = features.filter((f) => changeFeatures.includes(f.id))
   const picked = named.length
     ? named
-    : features.filter((f) => f.state === 'active' && f.owner === me)
+    : features.filter((f) => f.state === 'active' && isOwner(f.owner, me))
   if (!picked.length) return null
   return { ids: picked.map((f) => f.id), scope: [...new Set(picked.flatMap((f) => f.scope))] }
 }
@@ -321,13 +377,16 @@ export function checkProgressDoc(text) {
 }
 
 /**
- * One developer's hand-written part of PROGRESS.md: the `## <email>` section up to the next
+ * One developer's hand-written part of PROGRESS.md: the `## <email>` or `## @login` section up to the next
  * `## ` heading, whitespace-normalised — or null when they have no section yet.
  */
-export function ownSection(doc, email) {
+export function ownSection(doc, names) {
   const lines = String(doc).split('\n')
-  const heading = `## ${email}`.toLowerCase()
-  const start = lines.findIndex((l) => l.trim().toLowerCase() === heading)
+  const headings = [names]
+    .flat()
+    .filter(Boolean)
+    .map((n) => `## ${n}`.toLowerCase())
+  const start = lines.findIndex((l) => headings.includes(l.trim().toLowerCase()))
   if (start === -1) return null
   const rest = lines.slice(start + 1)
   const end = rest.findIndex((l) => /^## /.test(l))
@@ -699,4 +758,17 @@ export function checkTeamSetup({ branch, protection, collaborators, codeowners }
       fix: `add ${strangers.join(', ')} in Settings → Collaborators with write access`,
     },
   ]
+}
+
+/** CODEOWNERS with every rule line owned by every member (comments and patterns kept). */
+export function renderCodeowners(text, logins) {
+  const owners = logins.map((l) => `@${l}`).join(' ')
+  return String(text)
+    .split('\n')
+    .map((line) => {
+      const m = /^(\s*[^\s#]\S*\s+)(?:\S+\s*)*?(#.*)?$/.exec(line)
+      if (!m || /^\s*#/.test(line) || !line.trim()) return line
+      return `${m[1]}${owners}`
+    })
+    .join('\n')
 }
