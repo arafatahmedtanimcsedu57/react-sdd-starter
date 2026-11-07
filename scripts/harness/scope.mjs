@@ -15,7 +15,8 @@ import { ALWAYS_IN_SCOPE, changedFiles, fail, path, readFeatures, whoami } from 
 const { list, ledger, team, features } = readFeatures()
 // A hand-edited list (e.g. a widened scope) must not steer the check.
 const drift = findLedgerDrift(list, ledger, team)
-if (drift.length) fail(`features.json was edited by hand:\n  ${drift.join('\n  ')}`)
+if (drift.length)
+  fail(`features.json, team.json and the ledger disagree (a hand edit?):\n  ${drift.join('\n  ')}`)
 
 const files = changedFiles()
 const proposals = changesTouched(files).map((name) => {

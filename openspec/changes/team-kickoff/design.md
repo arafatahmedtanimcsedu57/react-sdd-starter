@@ -18,6 +18,12 @@ No UI.
   `git config user.email` + `gh api user` login) — never guessed by the lead or Claude.
 - Validated with Zod (`lib.mjs parseTeam`): unique logins, unique emails, login format.
 - Merge-safe enough: one line per member; a conflict is "keep both".
+- Every `join` also appends `{ "event": "join", "github": "…" }` (with `by` = the email) to
+  `features.ledger.jsonl`. Ledger lines are checked against the links in force when they
+  were written (a re-join with a new email stays valid), and a `team.json` email with no
+  matching join line is drift — a hand edit can't silently take over an unjoined member's
+  features. Still not authentication: PR review of `team.json` + ledger is the gate.
+- An `@login` owner must be on the roster (`features add` / `owner --set` refuse others).
 
 ## Identity
 

@@ -51,6 +51,14 @@ describe('npm run team', () => {
     expect(run.stdout).toMatch(/@ana-dev ↔ ana@x.io/)
     expect(roster().members[0]).toEqual({ github: 'ana-dev', email: 'ana@x.io' })
     expect(team([]).stdout).toMatch(/@ana-dev {2}joined as ana@x.io[\s\S]*@bo {2}not joined yet/)
+    const ledger = readFileSync(join(dir, 'features.ledger.jsonl'), 'utf8').trim().split('\n')
+    expect(ledger.map(JSON.parse)).toEqual([
+      expect.objectContaining({ event: 'join', github: 'ana-dev', by: 'ana@x.io' }),
+    ])
+    team(['join'], 'ana-dev', 'ana@x.io') // again, same link: not recorded twice
+    expect(
+      readFileSync(join(dir, 'features.ledger.jsonl'), 'utf8').trim().split('\n'),
+    ).toHaveLength(1)
   })
 
   it('writes CODEOWNERS with every member on every line', () => {

@@ -65,7 +65,7 @@ export function loginFor(team, email) {
 export const asMe = (me) => (typeof me === 'string' ? { email: me } : (me ?? {}))
 export function isOwner(featureOwner, me) {
   const { email, github } = asMe(me)
-  if (email && featureOwner === email) return true
+  if (email && featureOwner.toLowerCase() === email.toLowerCase()) return true
   return Boolean(github) && featureOwner.toLowerCase() === `@${github}`.toLowerCase()
 }
 const label = (me) => {
@@ -183,6 +183,7 @@ export function transition(features, id, to, { me, limits, reason, evidence } = 
 export function replayDefinitions(ledger) {
   const defs = {}
   for (const e of ledger) {
+    if (!e.id) continue
     const d = (defs[e.id] ??= {})
     if (Array.isArray(e.scope)) d.scope = e.scope
     if (e.owner) d.owner = e.owner
@@ -199,17 +200,24 @@ const sameScope = (a, b) => [...a].sort().join('\n') === [...b].sort().join('\n'
  * change or hand-over by someone other than the owner. Lines from before owners existed
  * carry no `by`; once one line has it, every later line must.
  */
-export function findLedgerAnomalies(ledger, team = { members: [] }) {
+export function findLedgerAnomalies(ledger) {
   const problems = []
   const state = {}
   const owner = {}
+  // email → @login, from the `join` lines seen so far: a line is checked against the links
+  // in force when it was written, so a member re-joining with a new email stays valid.
+  const joined = {}
   let sawBy = false
   ledger.forEach((e, i) => {
-    const where = `ledger line ${i + 1} (${e.id})`
+    const where = `ledger line ${i + 1} (${e.id ?? e.event})`
     if (e.by) sawBy = true
     else if (sawBy) problems.push(`${where} has no "by" — written by hand?`)
+    if (e.event === 'join') {
+      if (e.by && e.github) joined[e.by.toLowerCase()] = e.github
+      return
+    }
     const checked = Boolean(e.by)
-    const byOwner = () => isOwner(owner[e.id], { email: e.by, github: loginFor(team, e.by) })
+    const byOwner = () => isOwner(owner[e.id], { email: e.by, github: joined[e.by.toLowerCase()] })
     const notOwner = (what) =>
       checked && owner[e.id] && !byOwner()
         ? [`${where}: ${what} by ${e.by}, not the owner ${owner[e.id]}`]
@@ -245,6 +253,23 @@ export function findLedgerAnomalies(ledger, team = { members: [] }) {
   return problems
 }
 
+/** team.json emails that no `join` line backs: someone typed an email in by hand. */
+function rosterDrift(team, ledger) {
+  const recorded = (m) =>
+    ledger.some(
+      (e) =>
+        e.event === 'join' &&
+        e.github?.toLowerCase() === m.github.toLowerCase() &&
+        e.by?.toLowerCase() === m.email.toLowerCase(),
+    )
+  return (team?.members ?? [])
+    .filter((m) => m.email && !recorded(m))
+    .map(
+      (m) =>
+        `team.json links @${m.github} to ${m.email}, but no \`npm run team -- join\` recorded it`,
+    )
+}
+
 /** Definitions in features.json that the ledger doesn't back up (edited by hand). */
 export function findLedgerDrift(list, ledger, team) {
   const defs = replayDefinitions(ledger)
@@ -266,7 +291,8 @@ export function findLedgerDrift(list, ledger, team) {
       if (!recorded.owner) problems.push(`${f.id} has no owner in the ledger`)
       return problems
     })
-    .concat(findLedgerAnomalies(ledger, team))
+    .concat(findLedgerAnomalies(ledger))
+    .concat(rosterDrift(team, ledger))
 }
 
 const covers = (entry, file) => {
@@ -760,15 +786,26 @@ export function checkTeamSetup({ branch, protection, collaborators, codeowners }
   ]
 }
 
-/** CODEOWNERS with every rule line owned by every member (comments and patterns kept). */
+/**
+ * CODEOWNERS with every owned rule owned by every member. Comments, patterns (escaped spaces
+ * included), inline comments and line endings are kept; a rule with no owners is left
+ * unowned on purpose.
+ */
 export function renderCodeowners(text, logins) {
   const owners = logins.map((l) => `@${l}`).join(' ')
   return String(text)
     .split('\n')
-    .map((line) => {
-      const m = /^(\s*[^\s#]\S*\s+)(?:\S+\s*)*?(#.*)?$/.exec(line)
-      if (!m || /^\s*#/.test(line) || !line.trim()) return line
-      return `${m[1]}${owners}`
+    .map((raw) => {
+      const cr = raw.endsWith('\r') ? '\r' : ''
+      const line = cr ? raw.slice(0, -1) : raw
+      if (!line.trim() || /^\s*#/.test(line)) return raw
+      const m = /^(\s*(?:\\\s|\S)+)(\s+)(.*)$/.exec(line)
+      if (!m) return raw
+      const [, pattern, gap, rest] = m
+      const hash = rest.search(/(^|\s)#/)
+      const listed = hash === -1 ? rest : rest.slice(0, hash)
+      const comment = hash === -1 ? '' : ` ${rest.slice(hash).trim()}`
+      return listed.includes('@') ? `${pattern}${gap}${owners}${comment}${cr}` : raw
     })
     .join('\n')
 }

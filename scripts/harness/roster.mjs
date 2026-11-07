@@ -8,7 +8,17 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { isOwner, parseTeam, renderCodeowners } from './lib.mjs'
-import { fail, format, me, path, readFeatures, readTeam, TEAM } from './io.mjs'
+import {
+  appendLedger,
+  fail,
+  format,
+  me,
+  path,
+  readFeatures,
+  readLedger,
+  readTeam,
+  TEAM,
+} from './io.mjs'
 
 const [command = 'list', arg] = process.argv.slice(2)
 const team = readTeam()
@@ -71,11 +81,26 @@ switch (command) {
       ...team,
       members: team.members.map((m) => (m === member ? { ...m, github: login, email } : m)),
     })
+    // Recorded in the ledger like a state move: a team.json email without a join line is a
+    // hand edit (`features check` flags it), and old lines stay checked against old links.
+    const recorded = readLedger().some(
+      (e) =>
+        e.event === 'join' &&
+        e.github?.toLowerCase() === login.toLowerCase() &&
+        e.by?.toLowerCase() === email.toLowerCase(),
+    )
+    if (!recorded) appendLedger({ event: 'join', github: login })
     console.log(`✓ @${login} ↔ ${email}`)
     const ready = spawnSync(process.execPath, [path('scripts/harness/ready.mjs')], {
       encoding: 'utf8',
     })
     console.log(ready.status === 0 ? ready.stdout.trim() : `${ready.stderr}${ready.stdout}`.trim())
+    // Reported, not required: reading branch protection needs admin access.
+    const team2 = spawnSync(process.execPath, [path('scripts/harness/team.mjs')], {
+      encoding: 'utf8',
+    })
+    const summary = `${team2.stdout}${team2.stderr}`.trim().split('\n').at(-1)
+    console.log(`team:check — ${summary}`)
     const mine = featuresOf({ github: login, email }).filter((f) => f.state !== 'passing')
     console.log(
       mine.length

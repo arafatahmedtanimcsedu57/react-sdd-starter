@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   findLedgerAnomalies,
+  findLedgerDrift,
   isOwner,
   loginFor,
   parseFeatureList,
@@ -48,6 +49,7 @@ describe('isOwner', () => {
     expect(isOwner('@ana-dev', ana)).toBe(true)
     expect(isOwner('@bo', ana)).toBe(false)
     expect(isOwner('@ana-dev', { email: 'ana@x.io' })).toBe(false) // not joined: no login
+    expect(isOwner('ANA@x.io', ana)).toBe(true)
   })
 })
 
@@ -64,13 +66,12 @@ describe('@login owners', () => {
   })
 
   it('are accepted by the feature list', () => {
-    const list = { version: 2, features: [{ ...feature(), state: undefined, attempts: undefined }] }
-    expect(() => parseFeatureList(JSON.parse(JSON.stringify(list)))).not.toThrow()
-    const bad = {
-      version: 2,
-      features: [{ ...JSON.parse(JSON.stringify(list.features[0])), owner: 'ana' }],
+    const definition = (owner) => {
+      const { id, title, verify, scope } = feature()
+      return { id, title, owner, verify, scope }
     }
-    expect(() => parseFeatureList(bad)).toThrow(/owner/)
+    expect(() => parseFeatureList({ version: 2, features: [definition('@Ana-Dev')] })).not.toThrow()
+    expect(() => parseFeatureList({ version: 2, features: [definition('ana')] })).toThrow(/owner/)
   })
 
   it('can be moved by the member the roster links to', () => {
@@ -98,7 +99,7 @@ describe('@login owners', () => {
     ])
   })
 
-  it('accept ledger moves whose "by" email the roster links to the owner', () => {
+  it('resolve each "by" with the joins recorded before that line, so a re-join is safe', () => {
     const ledger = [
       {
         id: 'F03',
@@ -108,20 +109,53 @@ describe('@login owners', () => {
         owner: '@Ana-Dev',
         by: 'lead@x.io',
       },
-      { id: 'F03', from: 'not_started', to: 'active', by: 'ana@x.io' },
-      { id: 'F03', from: 'active', to: 'blocked', reason: 'r', by: 'eve@x.io' },
+      { event: 'join', github: 'ana-dev', by: 'ana@old.io' },
+      { id: 'F03', from: 'not_started', to: 'active', by: 'ana@old.io' },
+      { event: 'join', github: 'ana-dev', by: 'ana@x.io' },
+      { id: 'F03', from: 'active', to: 'blocked', reason: 'r', by: 'ana@x.io' },
+      { id: 'F03', from: 'blocked', to: 'active', by: 'eve@x.io' },
     ]
-    expect(findLedgerAnomalies(ledger, team)).toEqual([
-      'ledger line 3 (F03): moved by eve@x.io, not the owner @Ana-Dev',
+    expect(findLedgerAnomalies(ledger)).toEqual([
+      'ledger line 6 (F03): moved by eve@x.io, not the owner @Ana-Dev',
+    ])
+  })
+
+  it('reject a move made before its author joined', () => {
+    const ledger = [
+      { id: 'F03', from: null, to: 'not_started', scope: ['src/a'], owner: '@bo', by: 'lead@x.io' },
+      { id: 'F03', from: 'not_started', to: 'active', by: 'bo@x.io' },
+      { event: 'join', github: 'bo', by: 'bo@x.io' },
+    ]
+    expect(findLedgerAnomalies(ledger)).toEqual([
+      'ledger line 2 (F03): moved by bo@x.io, not the owner @bo',
     ])
   })
 })
 
+describe('roster drift', () => {
+  const list = { version: 2, features: [] }
+
+  it('flags a team.json email that no recorded join backs (a hand edit)', () => {
+    const roster = parseTeam({ version: 1, members: [{ github: 'bo', email: 'eve@x.io' }] })
+    expect(findLedgerDrift(list, [], roster)).toEqual([
+      'team.json links @bo to eve@x.io, but no `npm run team -- join` recorded it',
+    ])
+    const joined = [{ event: 'join', github: 'BO', by: 'eve@x.io' }]
+    expect(findLedgerDrift(list, joined, roster)).toEqual([])
+  })
+})
+
 describe('renderCodeowners', () => {
-  it('gives every rule line every member, keeping comments and patterns', () => {
+  it('gives every owned rule every member, keeping comments, patterns and line endings', () => {
     const text = '# who\n\n*            @old\n/openspec/   @old @x # specs\n'
     expect(renderCodeowners(text, ['ana-dev', 'bo'])).toBe(
-      '# who\n\n*            @ana-dev @bo\n/openspec/   @ana-dev @bo\n',
+      '# who\n\n*            @ana-dev @bo\n/openspec/   @ana-dev @bo # specs\n',
     )
+    expect(renderCodeowners('*  @a\r\n', ['p'])).toBe('*  @p\r\n')
+  })
+
+  it('keeps escaped spaces in patterns, and leaves deliberately unowned lines alone', () => {
+    expect(renderCodeowners('docs\\ folder/ @a\n', ['p', 'q'])).toBe('docs\\ folder/ @p @q\n')
+    expect(renderCodeowners('generated/ \nvendor/\n', ['p'])).toBe('generated/ \nvendor/\n')
   })
 })
