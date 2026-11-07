@@ -27,7 +27,8 @@ Things that affect everyone. Add, don't rewrite.
 
 - `chore/team-merge-safe-state` (slice 2 of `team-orchestration`, Gate 1 approved): owners,
   state only in the ledger, union merge for the ledger + `DECISIONS.md`, WIP per owner,
-  scope per branch, this per-owner `PROGRESS.md`.
+  scope per branch, this per-owner `PROGRESS.md`. Done; react-reviewer PASS; PR #31 open
+  (over the size limit — human chose one PR + `large-pr-approved`).
 - Slice 1 confirmed on `master`: a live worker got "Typecheck failed" and the scope error
   inside its own worktree.
 - Harness gaps 3 + 4 (enforced clock-out + junk check; trace of hook/verify runs) still open;
@@ -39,6 +40,10 @@ Things that affect everyone. Add, don't rewrite.
   `push.default=upstream` could make a bare `git push` target master; `guard-bash.sh` only
   checks the current branch name. Branch protection is the backstop. Decide in slice 3.
 
+- `.github/workflows/pr-size.yml` excludes `*.test.ts(x)` but not `*.test.mjs`, so harness
+  tests count toward the 400-line limit. Fix is a one-line CI change; needs a human OK.
+
 ### Next step
 
-- Human: review and merge the slice-2 PR. Then slice 3 `team-orchestrator` on its own branch.
+- Human: review PR #31, add `large-pr-approved`, merge. Then slice 3 `team-orchestrator`
+  on its own branch.
