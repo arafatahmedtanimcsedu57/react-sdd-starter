@@ -33,7 +33,8 @@ jobs:
             ':(exclude).claude/skills/openspec-*/**' \
             ':(exclude)e2e/**' \
             ':(exclude)**/*.test.ts' \
-            ':(exclude)**/*.test.tsx')
+            ':(exclude)**/*.test.tsx' \
+            ':(exclude)**/*.test.mjs')
 
           # numstat prints "-" for binary files; count those as 0 lines.
           total=$(echo "$stats" | awk '$1 != "-" { sum += $1 + $2 } END { print sum + 0 }')
