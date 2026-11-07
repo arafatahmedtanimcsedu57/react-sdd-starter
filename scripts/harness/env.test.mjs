@@ -1,6 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { checkEnvironment, findInstallDrift, nvmrcMismatch, satisfies } from './env.mjs'
+import {
+  checkEnvironment,
+  findInstallDrift,
+  findModulesRoot,
+  findUp,
+  nvmrcMismatch,
+  satisfies,
+} from './env.mjs'
 
 describe('satisfies', () => {
   const engines = '^22.22.2 || >=24.15.0'
@@ -116,5 +123,57 @@ describe('nvmrcMismatch', () => {
     expect(nvmrcMismatch('v22.22.2', 'lts/*')).toBeNull()
     expect(nvmrcMismatch('v22.22.2', null)).toBeNull()
     expect(nvmrcMismatch('v22.22.2', '24.x')).toBeNull()
+  })
+})
+
+describe('findUp', () => {
+  const parentOf = (dir) => dir.replace(/\/[^/]+$/, '') || '/'
+  const has = (dirs) => (dir) => dirs.includes(dir)
+
+  it('finds node_modules in the checkout itself', () => {
+    expect(findUp('/repo', has(['/repo']), parentOf)).toBe('/repo')
+  })
+
+  it('finds the main checkout install from a nested worktree, like Node does', () => {
+    const worktree = '/repo/.claude/worktrees/agent-1'
+    expect(findUp(worktree, has(['/repo']), parentOf)).toBe('/repo')
+  })
+
+  it('prefers the nearest install', () => {
+    const worktree = '/repo/.claude/worktrees/agent-1'
+    expect(findUp(worktree, has(['/repo', worktree]), parentOf)).toBe(worktree)
+  })
+
+  it('returns null when no folder up to the root has one', () => {
+    expect(findUp('/repo/a', has([]), parentOf)).toBeNull()
+  })
+
+  it('stops at stopAt instead of walking out of the repo', () => {
+    expect(findUp('/home/me/repo/a', has(['/home/me']), parentOf, '/home/me/repo')).toBeNull()
+  })
+})
+
+describe('findModulesRoot', () => {
+  const parentOf = (dir) => dir.replace(/\/[^/]+$/, '') || '/'
+  const exists = (paths) => (path) => paths.includes(path)
+  const worktree = '/repo/.claude/worktrees/agent-1'
+
+  it('skips a cache-only node_modules in the worktree for the real install in main', () => {
+    const fs = exists([
+      `${worktree}/node_modules`,
+      '/repo/node_modules',
+      '/repo/node_modules/.package-lock.json',
+    ])
+    expect(findModulesRoot(worktree, fs, parentOf, '/repo')).toBe('/repo')
+  })
+
+  it('reports the nearest node_modules when only caches exist, so ready says "not installed by npm"', () => {
+    const fs = exists([`${worktree}/node_modules`, '/repo/node_modules'])
+    expect(findModulesRoot(worktree, fs, parentOf, '/repo')).toBe(worktree)
+  })
+
+  it('is null when there is no node_modules inside the repo', () => {
+    const fs = exists(['/node_modules', '/node_modules/.package-lock.json'])
+    expect(findModulesRoot(worktree, fs, parentOf, '/repo')).toBeNull()
   })
 })

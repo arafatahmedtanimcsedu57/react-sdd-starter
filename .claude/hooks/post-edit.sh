@@ -5,7 +5,8 @@
 set -u
 file=$(jq -r '.tool_input.file_path // empty')
 { [ -z "$file" ] || [ ! -f "$file" ]; } && exit 0
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+. "$(dirname "$0")/lib.sh"
+cd "$(repo_root "$(dirname "$file")")" || exit 0
 
 npx --no-install prettier --write --ignore-unknown --log-level warn "$file" >/dev/null 2>&1
 

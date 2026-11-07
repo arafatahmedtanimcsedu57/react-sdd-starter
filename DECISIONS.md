@@ -16,6 +16,23 @@ Format:
 
 ---
 
+## 2026-11-08: Hooks resolve the checkout from the work, not `$CLAUDE_PROJECT_DIR`
+
+- Why: a worker agent runs in a git worktree at `.claude/worktrees/agent-<id>/`, but Claude
+  Code sets `$CLAUDE_PROJECT_DIR` to the main checkout. Every hook `cd`'d there, so a
+  worker's type errors, scope drift and failing tests went unreported (probe, Claude Code
+  2.1.319). `.claude/hooks/lib.sh` `repo_root` now takes the edited file's folder or the
+  hook input `cwd`; `SubagentStop` runs the stop checks; `ready.mjs` uses the nearest npm
+  install walking up, so a nested worktree runs on the main checkout's `node_modules`.
+- Proof: simulated hooks in a nested worktree catch a type-only error, pass `ready`, and
+  fail scope for a file outside the active feature; a live worker showed the hooks enter its
+  worktree and a stop hook fires for it with feedback.
+- Found: Claude Code creates worker worktrees from the default branch, not the current one.
+  Harness fixes reach workers only once merged; a worker always starts from `master`.
+- Rejected: symlinking `node_modules` into each worktree — Claude Code creates the worktree,
+  we have no step there; `npm ci` per worker — minutes and hundreds of MB each.
+- Revisit when: Claude Code exposes the worktree as the project dir for subagents.
+
 ## 2026-11-08: Team work runs through one orchestrator per developer, one worker per task
 
 - Why: two developers (Login/Registration vs Dashboard + Profile) each run many tasks in
