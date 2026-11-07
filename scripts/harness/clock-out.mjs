@@ -1,11 +1,7 @@
-// The end of a session, checked instead of trusted: the next session (or teammate) must find
-// a working setup, no leftovers, your PROGRESS.md section up to date and everything
-// committed. Ported from #24 (which never reached master) to per-owner PROGRESS.md sections.
-//
+// The end of a session, checked instead of trusted: a working setup, no leftovers, your
+// PROGRESS.md section up to date, everything committed. It never edits code.
 //   npm run clock-out            check, exit 1 on any ✗
 //   npm run clock-out -- --fix   first delete untracked junk files (*.log, debug-*, *.orig …)
-//
-// It never edits code: debug leftovers are reported, not removed.
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, unlinkSync } from 'node:fs'
 import { findJunk, ownSection, progressProblem } from './lib.mjs'
@@ -22,9 +18,7 @@ import {
 
 const fix = process.argv.includes('--fix')
 const untracked = () =>
-  git('-c', 'core.quotePath=off', 'ls-files', '-z', '--others', '--exclude-standard')
-    .split('\0')
-    .filter(Boolean)
+  git('ls-files', '-z', '--others', '--exclude-standard').split('\0').filter(Boolean)
 const indent = (text) =>
   text
     .replace(/^\n+|\s+$/g, '')
