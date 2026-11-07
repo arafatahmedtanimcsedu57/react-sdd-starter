@@ -7,7 +7,12 @@ import {
   checkProgressDoc,
   findLedgerAnomalies,
   findLedgerDrift,
+  findJunk,
   findOutOfScope,
+  formatTrace,
+  ownSection,
+  parseTraceLines,
+  progressProblem,
   parseFeatureList,
   proposalFeature,
   renderProgress,
@@ -462,5 +467,130 @@ describe('checkInstructions', () => {
     expect(checkInstructions('read `.claude/rules/gone.md`', { maxLines: 200, exists })).toEqual([
       'links to `.claude/rules/gone.md`, which does not exist',
     ])
+  })
+})
+
+describe('ownSection', () => {
+  const doc =
+    '# Progress\n\n## Team-wide\n- a\n\n## me@example.com\n\n### Next step\n\n- do x\n\n## x@example.com\n- y\n'
+
+  it("returns only that developer's section, whitespace-normalised", () => {
+    expect(ownSection(doc, 'me@example.com')).toBe('### Next step - do x')
+    expect(ownSection(doc, 'x@example.com')).toBe('- y')
+  })
+
+  it('matches the heading whatever the case of the email', () => {
+    expect(ownSection('## Me@Example.com\n- a\n', 'me@example.com')).toBe('- a')
+  })
+
+  it('is null for a developer without a section', () => {
+    expect(ownSection(doc, 'new@example.com')).toBeNull()
+  })
+})
+
+describe('findJunk', () => {
+  it('picks out leftovers and leaves real files alone', () => {
+    const files = ['vite.log', 'debug-run.txt', 'src/a.tsx.orig', 'notes~', 'src/.DS_Store']
+    const real = [
+      'src/debug.ts',
+      'src/routes/Log.tsx',
+      'src/lib/catalog.ts',
+      'PROGRESS.md',
+      // new, never-committed source must survive --fix
+      'src/lib/debug-utils.ts',
+      'e2e/debug-panel.spec.ts',
+      'debug-notes.md',
+      'src/components/ui/debug-overlay.tsx',
+    ]
+    expect(findJunk([...files, ...real])).toEqual(files)
+  })
+})
+
+describe('parseTraceLines / formatTrace', () => {
+  it('drops half-written lines and non-entries', () => {
+    const text = '{"at":"2026-10-06T12:00:01Z","source":"s","step":"x","exit":0}\n{"at":"2026\n42\n'
+    expect(parseTraceLines(text)).toHaveLength(1)
+  })
+
+  it('aligns entries and marks failures with their exit code', () => {
+    const entries = [
+      { at: '2026-10-06T12:00:01Z', source: 'stop-hook', step: 'ready', exit: 0, ms: 40 },
+      {
+        at: '2026-10-06T12:00:09Z',
+        source: 'post-edit',
+        step: 'eslint',
+        exit: 1,
+        ms: 812,
+        detail: 'src/A.tsx',
+      },
+    ]
+    expect(formatTrace(entries)).toEqual([
+      '12:00:01  stop-hook/ready   ok      40ms',
+      '12:00:09  post-edit/eslint  ✗1     812ms  src/A.tsx',
+    ])
+  })
+
+  it('shows the branch when entries come from several (worker worktrees)', () => {
+    const entries = [
+      {
+        at: '2026-11-08T09:00:00Z',
+        branch: 'feat/f03/a',
+        source: 'stop-hook',
+        step: 'scope',
+        exit: 0,
+        ms: 5,
+      },
+      {
+        at: '2026-11-08T09:00:01Z',
+        branch: 'master',
+        source: 'stop-hook',
+        step: 'scope',
+        exit: 1,
+        ms: 6,
+      },
+    ]
+    expect(formatTrace(entries)).toEqual([
+      '09:00:00  feat/f03/a  stop-hook/scope  ok       5ms',
+      '09:00:01  master      stop-hook/scope  ✗1       6ms',
+    ])
+  })
+})
+
+describe('progressProblem', () => {
+  const base = {
+    changed: ['src/a.ts'],
+    now: 'next: x',
+    before: 'next: y',
+    onDefault: false,
+    email: 'me@x.y',
+  }
+
+  it('passes when your section changed on a branch that changes files', () => {
+    expect(progressProblem(base)).toBeNull()
+  })
+
+  it('fails when your section is the same as at the fork point', () => {
+    expect(progressProblem({ ...base, now: 'same', before: 'same' })).toMatch(
+      /not your PROGRESS.md section/,
+    )
+  })
+
+  it('fails when only PROGRESS.md changed but not your section', () => {
+    const onlyProgress = { ...base, changed: ['PROGRESS.md'], now: 'same', before: 'same' }
+    expect(progressProblem(onlyProgress)).toMatch(/under "## me@x.y"/)
+  })
+
+  it('fails without a section, and without a git email', () => {
+    expect(progressProblem({ ...base, now: null })).toMatch(/no section for you/)
+    expect(progressProblem({ ...base, email: '' })).toMatch(/user.email/)
+  })
+
+  it('passes a section added on this branch, and anything when nothing changed', () => {
+    expect(progressProblem({ ...base, before: null })).toBeNull()
+    expect(progressProblem({ ...base, changed: [], now: null })).toBeNull()
+  })
+
+  it('on the default branch only asks that a section exists (the commit check does the rest)', () => {
+    expect(progressProblem({ ...base, onDefault: true, now: 'same', before: 'same' })).toBeNull()
   })
 })

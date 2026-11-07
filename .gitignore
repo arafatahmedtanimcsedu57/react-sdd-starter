@@ -18,3 +18,6 @@ graphify-out/
 
 # orchestrator board (local to each developer)
 .claude/orchestra/
+
+# Hook / verify / clock-out step log, read with `npm run trace` (local evidence, not history)
+.claude/traces/

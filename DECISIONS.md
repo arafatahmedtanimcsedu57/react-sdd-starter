@@ -20,6 +20,24 @@ Format:
 
 ---
 
+## 2026-11-08: Clock-out is a command and hook steps are traced (port of #24)
+
+- Why: "no junk, PROGRESS.md updated, committed" was prose and got skipped, and when a hook
+  or `features verify` failed nothing showed which step failed or when. `npm run clock-out`
+  checks it and names each fix (`--fix` deletes only untracked junk — never code);
+  `.claude/hooks/trace.sh` and `features verify` append one JSON line per step, read with
+  `npm run trace [-- --failed]`. Built and reviewed on 2026-10-06 in #24, which was merged
+  into its stacked base branch and never reached `master`; ported here.
+- Changed in the port: clock-out checks the caller's own `## <email>` section of
+  `PROGRESS.md`; it passes on the default branch with a clean tree (orchestrator sessions);
+  traces from every worker worktree go to the main checkout's `.claude/traces/`, tagged
+  with the branch, so they survive the worktree's removal.
+- Rejected: clock-out in the Stop hook — it fires every turn, clock-out is per session;
+  committing traces — noisy diffs for local evidence; re-running `npm run check` inside
+  clock-out — a known red check written under Known issues must not block a handoff.
+- Lesson: a PR stacked on another branch merges into that branch. Retarget it to the
+  default branch before merging, or it never ships.
+
 ## 2026-11-08: Gate 2 is enforced by branch protection, verified by `npm run team:check`
 
 - Why: GitHub never lets a PR's author approve it, so "reviewed by the other developer"

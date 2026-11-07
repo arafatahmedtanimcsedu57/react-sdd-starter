@@ -1,13 +1,25 @@
 // File, git and process helpers shared by the harness CLIs. Logic lives in lib.mjs.
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { parseFeatureList, replayFeatures } from './lib.mjs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { parseFeatureList, parseTraceLines, replayFeatures } from './lib.mjs'
 
 export const ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], {
   encoding: 'utf8',
 }).trim()
 export const path = (rel) => join(ROOT, rel)
+
+export const PROGRESS = 'PROGRESS.md'
+
+// One JSON line per hook / verify / clock-out step, per UTC day, in the MAIN checkout (the
+// parent of the .git all worktrees share), so a worker worktree's steps outlive it.
+// Gitignored: local evidence, not history. .claude/hooks/trace.sh writes the same shape.
+// Resolved when used (inside the callers' error handling), not at import: every harness CLI
+// imports this file, and `--path-format` needs git ≥ 2.31.
+export function tracesDir() {
+  const common = git('rev-parse', '--path-format=absolute', '--git-common-dir')
+  return common.startsWith('/') ? join(dirname(common), '.claude/traces') : path('.claude/traces')
+}
 
 export const FEATURES = 'features.json'
 export const LEDGER = 'features.ledger.jsonl'
@@ -112,7 +124,7 @@ export function forkPoint() {
   return 'HEAD'
 }
 
-const DEFAULT_BRANCH = /^(main|master)$/
+export const DEFAULT_BRANCH = /^(main|master)$/
 
 /**
  * Files changed on this branch: committed since the fork point, staged, unstaged, untracked,
@@ -126,4 +138,25 @@ export function changedFiles() {
     git('ls-files', '--others', '--exclude-standard'),
   ]
   return [...new Set(lists.join('\n').split('\n').filter(Boolean))].sort()
+}
+
+/** Records one step. Tracing must never break the thing it traces, so errors are dropped. */
+export function appendTrace(entry) {
+  const at = new Date().toISOString()
+  try {
+    const dir = tracesDir()
+    mkdirSync(dir, { recursive: true })
+    const branch = git('rev-parse', '--abbrev-ref', 'HEAD')
+    appendFileSync(
+      join(dir, `${at.slice(0, 10)}.jsonl`),
+      `${JSON.stringify({ at, ...(branch ? { branch } : {}), ...entry })}\n`,
+    )
+  } catch {
+    // no trace is better than a failed verify
+  }
+}
+
+export function readTraces(day) {
+  const file = join(tracesDir(), `${day}.jsonl`)
+  return existsSync(file) ? parseTraceLines(readFileSync(file, 'utf8')) : []
 }

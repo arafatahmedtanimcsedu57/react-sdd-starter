@@ -25,11 +25,11 @@ Things that affect everyone. Add, don't rewrite.
 
 ### Current work
 
-- `team-orchestration` is shipped: all four slices merged (#30, #31, #32, #34) and their
-  five OpenSpec changes archived under `openspec/changes/archive/2026-11-08-team-*`
-  (this PR). No open changes.
-- Harness gaps 3 + 4 (enforced clock-out + junk check; trace of hook/verify runs) still open;
-  `.claude/traces/` is untracked and was left alone.
+- `chore/harness-clockout-port` (Gate 1 approved): ports the stranded #24 — `npm run
+clock-out` and `npm run trace` — to the current harness (own PROGRESS section, traces
+  from all worktrees in the main checkout, clean default branch passes). With it, harness
+  gaps 1–4 are all done. `team-orchestration` shipped earlier (#30–#35).
+- `chore/harness-clockout-trace` (the stranded #24 work) can be deleted once this merges.
 
 ### Known issues
 

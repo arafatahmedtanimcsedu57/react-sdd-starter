@@ -320,6 +320,75 @@ export function checkProgressDoc(text) {
     : []
 }
 
+/**
+ * One developer's hand-written part of PROGRESS.md: the `## <email>` section up to the next
+ * `## ` heading, whitespace-normalised — or null when they have no section yet.
+ */
+export function ownSection(doc, email) {
+  const lines = String(doc).split('\n')
+  const heading = `## ${email}`.toLowerCase()
+  const start = lines.findIndex((l) => l.trim().toLowerCase() === heading)
+  if (start === -1) return null
+  const rest = lines.slice(start + 1)
+  const end = rest.findIndex((l) => /^## /.test(l))
+  return (end === -1 ? rest : rest.slice(0, end)).join(' ').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Clock-out's PROGRESS.md rule, or null when it holds. `now` / `before` are the caller's
+ * section today and at the fork point (null = no section). Nothing changed → nothing to
+ * hand off; on the default branch only the commit check applies.
+ */
+export function progressProblem({ changed, now, before, onDefault, email }) {
+  if (!email) return 'git has no user.email.\nFIX: git config user.email you@example.com'
+  if (!changed.length) return null
+  if (now === null) {
+    return `PROGRESS.md has no section for you.\nFIX: add "## ${email}" with Current work, Known issues, Next step.`
+  }
+  if (!onDefault && before !== null && before === now) {
+    return `This branch changes files but not your PROGRESS.md section.\nFIX: update Current work, Known issues and Next step under "## ${email}".`
+  }
+  return null
+}
+
+// Untracked files a session typically leaves behind. `clock-out --fix` deletes these, and git
+// never saw them, so a false positive is unrecoverable: `debug-*` only at the repo root, and
+// nothing that looks like source or docs is ever junk.
+const JUNK = [/\.log$/, /^debug-[^/]*$/, /\.(orig|rej|tmp|bak)$/, /(^|\/)\.DS_Store$/, /~$/]
+const NEVER_JUNK = /\.([cm]?[jt]sx?|css|json|md|html)$/
+export const findJunk = (untracked) =>
+  untracked.filter((f) => !NEVER_JUNK.test(f) && JUNK.some((re) => re.test(f)))
+
+/** Trace lines → entries, dropping half-written lines (a killed hook) and non-entries. */
+export function parseTraceLines(text) {
+  return text.split('\n').flatMap((line) => {
+    try {
+      const entry = JSON.parse(line)
+      return typeof entry?.at === 'string' ? [entry] : []
+    } catch {
+      return []
+    }
+  })
+}
+
+/**
+ * One aligned line per trace entry: time, branch (when entries come from several — worker
+ * worktrees all trace into the main checkout), source/step, ok or ✗<exit>, duration, detail.
+ */
+export function formatTrace(entries) {
+  const branches = new Set(entries.map((e) => e.branch ?? ''))
+  const showBranch = branches.size > 1
+  const bw = Math.max(0, ...entries.map((e) => (e.branch ?? '').length))
+  const width = Math.max(0, ...entries.map((e) => `${e.source}/${e.step}`.length))
+  return entries.map((e) => {
+    const branch = showBranch ? `${(e.branch ?? '').padEnd(bw)}  ` : ''
+    const name = `${e.source}/${e.step}`.padEnd(width)
+    const status = (e.exit === 0 ? 'ok' : `✗${e.exit}`).padEnd(4)
+    const ms = e.ms == null ? '' : `${e.ms}ms`.padStart(8)
+    return `${e.at.slice(11, 19)}  ${branch}${name}  ${status}${ms}${e.detail ? `  ${e.detail}` : ''}`
+  })
+}
+
 // Backticked repo paths to markdown files, without placeholders like <name> or globs.
 const LINKED_DOC = /`([\w.\-/]+\.md)`/g
 
