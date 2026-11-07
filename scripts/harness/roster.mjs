@@ -77,10 +77,6 @@ switch (command) {
       me() || fail('git has no user.email.\n  FIX: git config user.email you@example.com')
     const member = team.members.find((m) => m.github.toLowerCase() === login.toLowerCase())
     if (!member) fail(`@${login} is not on the team. Ask the lead: npm run team -- add @${login}`)
-    write({
-      ...team,
-      members: team.members.map((m) => (m === member ? { ...m, github: login, email } : m)),
-    })
     // Recorded in the ledger like a state move: a team.json email without a join line is a
     // hand edit (`features check` flags it), and old lines stay checked against old links.
     const recorded = readLedger().some(
@@ -90,16 +86,21 @@ switch (command) {
         e.by?.toLowerCase() === email.toLowerCase(),
     )
     if (!recorded) appendLedger({ event: 'join', github: login })
+    // Ledger first: a crash between the two leaves a join line, never an unbacked email.
+    write({
+      ...team,
+      members: team.members.map((m) => (m === member ? { ...m, github: login, email } : m)),
+    })
     console.log(`✓ @${login} ↔ ${email}`)
     const ready = spawnSync(process.execPath, [path('scripts/harness/ready.mjs')], {
       encoding: 'utf8',
     })
     console.log(ready.status === 0 ? ready.stdout.trim() : `${ready.stderr}${ready.stdout}`.trim())
     // Reported, not required: reading branch protection needs admin access.
-    const team2 = spawnSync(process.execPath, [path('scripts/harness/team.mjs')], {
+    const teamCheck = spawnSync(process.execPath, [path('scripts/harness/team.mjs')], {
       encoding: 'utf8',
     })
-    const summary = `${team2.stdout}${team2.stderr}`.trim().split('\n').at(-1)
+    const summary = `${teamCheck.stdout}${teamCheck.stderr}`.trim().split('\n').at(-1)
     console.log(`team:check — ${summary}`)
     const mine = featuresOf({ github: login, email }).filter((f) => f.state !== 'passing')
     console.log(
