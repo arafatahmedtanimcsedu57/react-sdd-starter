@@ -2,32 +2,41 @@
 import { describe, expect, it } from 'vitest'
 import {
   addFeature,
+  changesTouched,
   checkInstructions,
+  checkProgressDoc,
   findLedgerDrift,
   findOutOfScope,
   parseFeatureList,
-  renderProgressBlock,
-  replaceAutoBlock,
-  replayLedger,
-  replayScopes,
+  proposalFeature,
+  renderProgress,
+  replayFeatures,
+  scopeForBranch,
   summariseTasks,
   transition,
 } from './lib.mjs'
 
+const ME = 'me@example.com'
+const X = 'x@example.com'
 const feature = (over = {}) => ({
   id: 'F01',
   title: 'Items list',
+  owner: ME,
   verify: 'npx vitest run src/routes/ItemsPage.test.tsx',
   scope: ['src/routes'],
-  state: 'not_started',
-  attempts: 0,
   ...over,
 })
-const list = (...features) => ({ version: 1, features })
+const list = (...features) => ({ version: 2, limits: { activePerOwner: 2 }, features })
+const added = (id, owner = ME, scope = ['src/routes']) => [
+  { id, from: null, to: 'not_started', scope, owner },
+]
+const view = (features, ledger) => replayFeatures(list(...features), ledger)
 
 describe('parseFeatureList', () => {
-  it('accepts a valid list', () => {
-    expect(parseFeatureList(list(feature())).features).toHaveLength(1)
+  it('accepts a valid list and defaults the per-owner limit', () => {
+    const parsed = parseFeatureList({ version: 2, features: [feature()] })
+    expect(parsed.features).toHaveLength(1)
+    expect(parsed.limits).toEqual({ activePerOwner: 2 })
   })
 
   it('rejects a feature without a runnable proof command', () => {
@@ -56,16 +65,20 @@ describe('parseFeatureList', () => {
     expect(() => parseFeatureList(list(feature(), feature()))).toThrow(/duplicate.*F01/i)
   })
 
-  it('rejects an unknown state', () => {
-    expect(() => parseFeatureList(list(feature({ state: 'done' })))).toThrow()
+  it('needs an owner email', () => {
+    expect(() => parseFeatureList(list(feature({ owner: 'arafat' })))).toThrow(/owner/)
+  })
+
+  it('refuses a v1 list that still stores state', () => {
+    expect(() => parseFeatureList({ version: 1, features: [] })).toThrow(/version/)
   })
 })
 
 describe('addFeature', () => {
-  it('appends a not_started feature without mutating the input', () => {
+  it('appends a definition without mutating the input', () => {
     const before = list()
-    const after = addFeature(before, feature({ state: 'passing' }))
-    expect(after.features[0].state).toBe('not_started')
+    const after = addFeature(before, feature())
+    expect(after.features).toHaveLength(1)
     expect(before.features).toHaveLength(0)
   })
 
@@ -74,90 +87,187 @@ describe('addFeature', () => {
   })
 })
 
-describe('transition', () => {
-  it('starts a feature', () => {
-    const next = transition(list(feature()), 'F01', 'active')
-    expect(next.features[0].state).toBe('active')
-  })
-
-  it('enforces WIP=1', () => {
-    const l = list(feature({ state: 'active' }), feature({ id: 'F02' }))
-    expect(() => transition(l, 'F02', 'active')).toThrow(/F01 is still active.*WIP=1/s)
-  })
-
-  it('needs a reason to block', () => {
-    const l = list(feature({ state: 'active' }))
-    expect(() => transition(l, 'F01', 'blocked')).toThrow(/reason/)
-    expect(transition(l, 'F01', 'blocked', { reason: 'API missing' }).features[0]).toMatchObject({
+describe('replayFeatures', () => {
+  it('replays state, evidence and a block reason from the ledger', () => {
+    const ledger = [
+      ...added('F01'),
+      { id: 'F01', from: 'not_started', to: 'active' },
+      { id: 'F01', from: 'active', to: 'blocked', reason: 'no API' },
+    ]
+    expect(view([feature()], ledger)[0]).toMatchObject({
       state: 'blocked',
-      blockedReason: 'API missing',
+      blockedReason: 'no API',
+    })
+  })
+
+  it('takes evidence from the passing line, falling back to its commit', () => {
+    const ledger = [
+      ...added('F01'),
+      { id: 'F01', from: 'not_started', to: 'active' },
+      { id: 'F01', from: 'active', to: 'passing', commit: 'abc', at: 't' },
+    ]
+    expect(view([feature()], ledger)[0].evidence).toEqual({ commit: 'abc', at: 't' })
+  })
+
+  it('counts failed verifies only since the feature last became active', () => {
+    const ledger = [
+      ...added('F01'),
+      { id: 'F01', from: 'not_started', to: 'active' },
+      { id: 'F01', event: 'verify_failed' },
+      { id: 'F01', from: 'active', to: 'blocked', reason: 'r' },
+      { id: 'F01', from: 'blocked', to: 'active' },
+      { id: 'F01', event: 'verify_failed' },
+    ]
+    expect(view([feature()], ledger)[0].attempts).toBe(1)
+  })
+
+  it('gives the same states whichever branch is merged first (union merge)', () => {
+    const base = [...added('F01'), ...added('F02', X)]
+    const mine = [{ id: 'F01', from: 'not_started', to: 'active' }]
+    const theirs = [
+      { id: 'F02', from: 'not_started', to: 'active' },
+      { id: 'F02', from: 'active', to: 'passing', commit: 'c', at: 't' },
+    ]
+    const defs = [feature(), feature({ id: 'F02', owner: X })]
+    const states = (ledger) => view(defs, ledger).map((f) => f.state)
+    expect(states([...base, ...mine, ...theirs])).toEqual(['active', 'passing'])
+    expect(states([...base, ...theirs, ...mine])).toEqual(['active', 'passing'])
+  })
+})
+
+describe('transition', () => {
+  const opts = { me: ME, limits: { activePerOwner: 2 } }
+  const at = (state, over) => ({ ...feature(over), state, attempts: 0 })
+
+  it('returns the ledger line for starting a feature', () => {
+    expect(transition([at('not_started')], 'F01', 'active', opts)).toEqual({
+      id: 'F01',
+      from: 'not_started',
+      to: 'active',
+    })
+  })
+
+  it('refuses a developer who does not own the feature', () => {
+    expect(() => transition([at('not_started', { owner: X })], 'F01', 'active', opts)).toThrow(
+      /belongs to x@example.com; you are me@example.com/,
+    )
+  })
+
+  it('caps active features per owner, ignoring other owners', () => {
+    const features = [
+      at('active', { id: 'F01' }),
+      at('active', { id: 'F02' }),
+      at('active', { id: 'F03', owner: X }),
+      at('not_started', { id: 'F04' }),
+    ]
+    expect(() => transition(features, 'F04', 'active', opts)).toThrow(
+      /2 active \(F01, F02\); the limit is 2/,
+    )
+    const roomy = { ...opts, limits: { activePerOwner: 3 } }
+    expect(transition(features, 'F04', 'active', roomy).to).toBe('active')
+  })
+
+  it('needs a reason to block and records it', () => {
+    expect(() => transition([at('active')], 'F01', 'blocked', opts)).toThrow(/reason/)
+    expect(transition([at('active')], 'F01', 'blocked', { ...opts, reason: 'API' })).toMatchObject({
+      to: 'blocked',
+      reason: 'API',
     })
   })
 
   it('only reaches passing with evidence from a verify run', () => {
-    const l = list(feature({ state: 'active' }))
-    expect(() => transition(l, 'F01', 'passing')).toThrow(/evidence/)
-    const next = transition(l, 'F01', 'passing', { evidence: { commit: 'abc', at: 'now' } })
-    expect(next.features[0]).toMatchObject({ state: 'passing', evidence: { commit: 'abc' } })
+    expect(() => transition([at('active')], 'F01', 'passing', opts)).toThrow(/evidence/)
+    const evidence = { commit: 'abc', at: 'now' }
+    expect(transition([at('active')], 'F01', 'passing', { ...opts, evidence })).toMatchObject({
+      to: 'passing',
+      evidence,
+    })
   })
 
-  it('cannot skip from not_started to passing', () => {
-    expect(() =>
-      transition(list(feature()), 'F01', 'passing', { evidence: { commit: 'a', at: 'b' } }),
-    ).toThrow(/not_started → passing/)
-  })
-
-  it('treats passing as final', () => {
-    const l = list(feature({ state: 'passing' }))
-    expect(() => transition(l, 'F01', 'active')).toThrow(/passing → active/)
+  it('cannot skip from not_started to passing, and treats passing as final', () => {
+    const evidence = { commit: 'a', at: 'b' }
+    expect(() => transition([at('not_started')], 'F01', 'passing', { ...opts, evidence })).toThrow(
+      /not_started → passing/,
+    )
+    expect(() => transition([at('passing')], 'F01', 'active', opts)).toThrow(/passing → active/)
   })
 
   it('names an unknown feature', () => {
-    expect(() => transition(list(), 'F09', 'active')).toThrow(/F09/)
+    expect(() => transition([], 'F09', 'active', opts)).toThrow(/F09/)
   })
 })
 
-describe('ledger', () => {
-  const entries = [
-    { id: 'F01', from: null, to: 'not_started' },
-    { id: 'F01', from: 'not_started', to: 'active' },
-  ]
-
-  it('replays the last state per feature', () => {
-    expect(replayLedger(entries)).toEqual({ F01: 'active' })
-  })
-
-  it('ignores entries that record something other than a state move', () => {
-    const withScope = [...entries, { id: 'F01', from: null, to: null, scopeAdded: 'src/x' }]
-    expect(replayLedger(withScope)).toEqual({ F01: 'active' })
-  })
-
-  it('reports a state that was edited by hand', () => {
-    const drift = findLedgerDrift(list(feature({ state: 'passing' })), replayLedger(entries))
-    expect(drift).toEqual(['F01 state is "passing" but the ledger says "active"'])
+describe('findLedgerDrift', () => {
+  it('finds no drift when definitions match the ledger', () => {
+    expect(findLedgerDrift(list(feature()), added('F01'))).toEqual([])
   })
 
   it('reports a feature added without the script', () => {
-    expect(findLedgerDrift(list(feature({ id: 'F02' })), {})).toEqual([
+    expect(findLedgerDrift(list(feature({ id: 'F02' })), [])).toEqual([
       'F02 is not in the ledger (added by hand?)',
     ])
   })
 
   it('reports a scope widened by hand', () => {
-    const scopes = replayScopes([{ id: 'F01', scope: ['src/routes'] }])
-    const l = list(feature({ state: 'active', scope: ['src'] }))
-    expect(findLedgerDrift(l, replayLedger(entries), scopes)).toEqual([
+    expect(findLedgerDrift(list(feature({ scope: ['src'] })), added('F01'))).toEqual([
       'F01 scope is [src] but the ledger says [src/routes]',
     ])
   })
 
-  it('skips the scope comparison when the ledger never recorded one', () => {
-    const l = list(feature({ state: 'active', scope: ['src'] }))
-    expect(findLedgerDrift(l, replayLedger(entries), {})).toEqual([])
+  it('reports an owner changed by hand, and follows an owner hand-over', () => {
+    expect(findLedgerDrift(list(feature({ owner: X })), added('F01'))).toEqual([
+      'F01 owner is x@example.com but the ledger says me@example.com',
+    ])
+    const handedOver = [...added('F01'), { id: 'F01', event: 'owner', owner: X }]
+    expect(findLedgerDrift(list(feature({ owner: X })), handedOver)).toEqual([])
   })
 
-  it('finds no drift when they agree', () => {
-    expect(findLedgerDrift(list(feature({ state: 'active' })), replayLedger(entries))).toEqual([])
+  it('reports a feature whose owner the ledger never recorded', () => {
+    const legacy = [{ id: 'F01', from: null, to: 'not_started', scope: ['src/routes'] }]
+    expect(findLedgerDrift(list(feature()), legacy)).toEqual(['F01 has no owner in the ledger'])
+  })
+})
+
+describe('scopeForBranch', () => {
+  const features = [
+    { ...feature({ id: 'F03', scope: ['src/features/auth'] }), state: 'active' },
+    { ...feature({ id: 'F04', owner: X, scope: ['src/features/dashboard'] }), state: 'active' },
+    { ...feature({ id: 'F05', scope: ['src/features/profile'] }), state: 'active' },
+  ]
+
+  it('uses the feature named by the change this branch builds', () => {
+    expect(scopeForBranch({ changeFeatures: ['F04'], features, me: ME })).toEqual({
+      ids: ['F04'],
+      scope: ['src/features/dashboard'],
+    })
+  })
+
+  it('falls back to my own active features when no change names one', () => {
+    expect(scopeForBranch({ changeFeatures: [], features, me: ME })).toEqual({
+      ids: ['F03', 'F05'],
+      scope: ['src/features/auth', 'src/features/profile'],
+    })
+  })
+
+  it('is null when nothing applies', () => {
+    expect(scopeForBranch({ changeFeatures: [], features, me: 'nobody@x.y' })).toBeNull()
+  })
+})
+
+describe('changesTouched / proposalFeature', () => {
+  it('lists open changes from changed files, ignoring the archive', () => {
+    const files = [
+      'openspec/changes/login-form/tasks.md',
+      'openspec/changes/login-form/proposal.md',
+      'openspec/changes/archive/2026-01-01-old/tasks.md',
+      'src/a.ts',
+    ]
+    expect(changesTouched(files)).toEqual(['login-form'])
+  })
+
+  it('reads the feature id, and none for harness changes', () => {
+    expect(proposalFeature('Risk tier: low\n\nFeature: F03\n')).toBe('F03')
+    expect(proposalFeature('Feature: none (harness change)')).toBeNull()
   })
 })
 
@@ -197,42 +307,29 @@ describe('summariseTasks', () => {
   })
 })
 
-describe('renderProgressBlock / replaceAutoBlock', () => {
-  const state = {
-    date: '2026-10-05',
-    branch: 'feat/x',
-    features: list(
-      feature({ state: 'passing' }),
-      feature({ id: 'F02', state: 'active', title: 'Cart' }),
-      feature({ id: 'F03', state: 'blocked', blockedReason: 'no API' }),
-      feature({ id: 'F04', title: 'Checkout' }),
-    ),
-    changes: [{ name: 'add-cart', done: 1, total: 4, approved: null }],
-  }
+describe('renderProgress / checkProgressDoc', () => {
+  const features = [
+    { ...feature(), state: 'passing' },
+    { ...feature({ id: 'F02', title: 'Dashboard', owner: X }), state: 'active' },
+    {
+      ...feature({ id: 'F03', title: 'Profile', owner: X }),
+      state: 'blocked',
+      blockedReason: 'API',
+    },
+  ]
+  const changes = [{ name: 'dashboard-layout', done: 1, total: 4, approved: null }]
 
-  it('summarises features, changes and the next step', () => {
-    const block = renderProgressBlock(state)
-    expect(block).toContain('1 passing · 1 active · 1 blocked · 1 not started')
-    expect(block).toContain('F02 — Cart')
-    expect(block).toContain('F03 — Items list (no API)')
-    expect(block).toContain('add-cart — 1/4 tasks, approval pending')
-    expect(block).toContain('finish F02')
+  it('groups features by owner and lists open changes', () => {
+    const out = renderProgress({ features, changes })
+    expect(out).toContain('1 passing · 1 active · 1 blocked · 0 not started')
+    expect(out).toContain('me@example.com: F01 Items list (passing)')
+    expect(out).toContain('x@example.com: F02 Dashboard (active), F03 Profile (blocked: API)')
+    expect(out).toContain('dashboard-layout 1/4 approval pending')
   })
 
-  it('suggests the next not_started feature when nothing is active', () => {
-    const idle = { ...state, features: list(feature({ id: 'F04', title: 'Checkout' })) }
-    expect(renderProgressBlock(idle)).toContain('start F04 — Checkout')
-  })
-
-  it('replaces only the text between the markers', () => {
-    const doc = 'top\n<!-- harness:auto:start -->\nold\n<!-- harness:auto:end -->\nbottom'
-    expect(replaceAutoBlock(doc, 'new')).toBe(
-      'top\n<!-- harness:auto:start -->\nnew\n<!-- harness:auto:end -->\nbottom',
-    )
-  })
-
-  it('fails loudly when the markers are missing', () => {
-    expect(() => replaceAutoBlock('no markers', 'x')).toThrow(/harness:auto:start/)
+  it('flags the old generated block in PROGRESS.md', () => {
+    expect(checkProgressDoc('<!-- harness:auto:start -->\nx')).toHaveLength(1)
+    expect(checkProgressDoc('## me@example.com\n- notes')).toEqual([])
   })
 })
 

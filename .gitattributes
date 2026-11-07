@@ -1,0 +1,5 @@
+# Two developers append to these at the same time. Union merge keeps both sides' lines
+# instead of conflicting (see DECISIONS.md, 2026-11-08). Replay of the ledger is per
+# feature, so the order the lines land in does not change any feature's state.
+features.ledger.jsonl merge=union
+DECISIONS.md merge=union

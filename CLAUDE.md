@@ -8,7 +8,7 @@ Authoritative rules for this repo. Claude reads this every session — follow it
 
 - Never merge, push to the default branch, or write a Gate 1 `approved:` line yourself.
 - Never change a feature's state by hand — only `npm run features` (see Feature list).
-- Stay inside the active feature's scope; one feature active at a time (WIP=1).
+- Stay inside your feature's scope; only a feature's owner moves it (max 2 active per owner).
 - "Done" means `npm run check` + the feature's proof command passed — not that it looks done.
 - Never disable a test, rule or coverage floor to get green. 3 failed tries → stop and ask.
 
@@ -42,22 +42,24 @@ it. When a vendored OpenSpec skill says "run `/opsx:propose`", say `/feature`; f
 Every session starts with no memory. The repo is the memory.
 
 - **Clock in:** `npm run ready` (right Node, deps installed), `npm run progress`, then read
-  `PROGRESS.md` and `DECISIONS.md`. Continue from "Next step"; don't re-decide anything
-  `DECISIONS.md` settles without asking.
+  your section of `PROGRESS.md` (headed by your git email) and `DECISIONS.md`. Continue
+  from "Next step"; don't re-decide anything `DECISIONS.md` settles without asking.
 - **While working:** a choice between real alternatives → one entry in `DECISIONS.md`
   (what, why, what you rejected).
 - **Clock out** (before you stop, even mid-change): `npm run check` green or its failure
-  written down; `npm run progress`; update `PROGRESS.md` → Current work, Known issues,
-  Next step; no debug code or stray files left; commit on the feature branch.
+  written down; update your `PROGRESS.md` section → Current work, Known issues, Next step
+  (never another developer's); no debug code or stray files left; commit on the branch.
 
 ## Feature list
 
-`features.md` is the human's prose; `features.json` is the machine copy: id, proof command
-(`verify`), `scope` (folders it may touch) and state. Every entry in one has its ID in the
-other.
+`features.md` is the human's prose; `features.json` is the machine copy: id, `owner` (git
+email), proof command (`verify`) and `scope` (folders it may touch). State lives only in
+`features.ledger.jsonl` (union-merged, so branches never conflict on it). Every entry in
+one has its ID in the other.
 
 - States: `not_started → active → passing`, `active ⇄ blocked`. `passing` is final.
-- `npm run features -- start <id>` before coding; only one feature is active (WIP=1).
+- `npm run features -- start <id>` before coding. Only the owner starts, blocks or verifies
+  a feature; each owner has at most `limits.activePerOwner` (2) active.
 - `npm run features -- verify <id>` runs `npm run check` + the proof command; only a pass
   moves it to `passing`. Every move is logged in `features.ledger.jsonl`.
 - New entry (after the human confirms it in `features.md`): `npm run features -- add --id
@@ -192,5 +194,5 @@ it with lazy loading or a lighter dependency; raising it is a human call.
 ## Hard rules (again — they matter most)
 
 No merging, no pushing to the default branch, no self-written approval. Feature states only
-via `npm run features`. One active feature, inside its scope. Done = commands passed. Never
+via `npm run features`. Only your own features, inside their scope. Done = commands passed. Never
 weaken a check to get green; after 3 failed tries, stop and ask.

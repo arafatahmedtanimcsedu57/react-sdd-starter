@@ -1,25 +1,21 @@
-// The feature list CLI. Only this script changes a feature's state; every change is also
-// appended to features.ledger.jsonl, so a hand-edited features.json is caught.
+// The feature list CLI. features.json holds definitions (id, title, owner, proof, scope);
+// a feature's state lives only in features.ledger.jsonl, which merges by union, so two
+// developers' branches never conflict over it. Only a feature's owner moves it.
 //
 //   npm run features                       list features
-//   npm run features -- add --id F03 --title "…" --verify "npx vitest run …" --scope src/x,src/y
-//   npm run features -- start F03          not_started|blocked → active (WIP=1)
+//   npm run features -- add --id F03 --title "…" --verify "npx vitest run …" --scope src/x,src/y [--owner a@b.c]
+//   npm run features -- start F03          not_started|blocked → active (max limits.activePerOwner)
 //   npm run features -- block F03 --reason "…"
 //   npm run features -- verify F03         npm run check + the proof command → passing
-//   npm run features -- scope F03 --add src/z   widen a scope (ask a human first)
+//   npm run features -- scope F03 --add src/z     widen a scope (ask a human first)
+//   npm run features -- owner F03 --set a@b.c     hand a feature over (ask a human first)
 //   npm run features -- check              features.json, ledger and features.md agree
+//   npm run features -- migrate [--owner a@b.c]   one-time: v1 list (state inside) → v2
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import {
-  addFeature,
-  findLedgerDrift,
-  parseFeatureList,
-  replayLedger,
-  replayScopes,
-  transition,
-} from './lib.mjs'
-import { appendLedger, fail, git, path, readLedger, readList, writeList } from './io.mjs'
+import { addFeature, findLedgerDrift, parseFeatureList, transition } from './lib.mjs'
+import { appendLedger, fail, git, me, path, readFeatures, writeList } from './io.mjs'
 
 const MAX_ATTEMPTS = 3
 
@@ -30,16 +26,17 @@ const { positionals, values } = parseArgs({
     title: { type: 'string' },
     verify: { type: 'string' },
     scope: { type: 'string' },
+    owner: { type: 'string' },
     change: { type: 'string' },
     reason: { type: 'string' },
     add: { type: 'string' },
+    set: { type: 'string' },
   },
 })
 const [command = 'list', id] = positionals
 
-function assertNoDrift(list) {
-  const ledger = readLedger()
-  const drift = findLedgerDrift(list, replayLedger(ledger), replayScopes(ledger))
+function assertNoDrift(list, ledger) {
+  const drift = findLedgerDrift(list, ledger)
   if (drift.length) {
     fail(
       `features.json was edited by hand:\n  ${drift.join('\n  ')}\n` +
@@ -48,17 +45,27 @@ function assertNoDrift(list) {
   }
 }
 
-function move(list, featureId, to, opts) {
-  const from = list.features.find((f) => f.id === featureId)?.state
-  let next
+function caller() {
+  return (
+    me() ||
+    fail(
+      'git has no user.email, so the harness cannot tell who you are.\n  FIX: git config user.email you@example.com',
+    )
+  )
+}
+
+function move(state, featureId, to, opts = {}) {
+  let line
   try {
-    next = transition(list, featureId, to, opts)
+    line = transition(state.features, featureId, to, {
+      me: caller(),
+      limits: state.list.limits,
+      ...opts,
+    })
   } catch (error) {
     return fail(error.message)
   }
-  writeList(next)
-  appendLedger({ id: featureId, from, to })
-  return next
+  appendLedger(line)
 }
 
 function run(cmd) {
@@ -66,11 +73,14 @@ function run(cmd) {
   return spawnSync(cmd, { shell: true, stdio: 'inherit' }).status === 0
 }
 
-function verify(list, featureId) {
-  const feature = list.features.find((f) => f.id === featureId)
+function verify(state, featureId) {
+  const feature = state.features.find((f) => f.id === featureId)
   if (!feature) fail(`${featureId} is not in features.json.`)
   if (feature.state !== 'active') {
     fail(`${featureId} is ${feature.state}. Start it first: npm run features -- start ${featureId}`)
+  }
+  if (feature.owner !== caller()) {
+    fail(`${featureId} belongs to ${feature.owner}; only its owner verifies it.`)
   }
   if (run('npm run check') && run(feature.verify)) {
     const dirty = git('status', '--porcelain') ? '+uncommitted' : ''
@@ -78,15 +88,12 @@ function verify(list, featureId) {
       commit: `${git('rev-parse', '--short', 'HEAD')}${dirty}`,
       at: new Date().toISOString(),
     }
-    move(list, featureId, 'passing', { evidence })
+    move(state, featureId, 'passing', { evidence })
     console.log(`✓ ${featureId} is passing`)
     return
   }
+  appendLedger({ id: featureId, event: 'verify_failed' })
   const attempts = feature.attempts + 1
-  writeList({
-    ...list,
-    features: list.features.map((f) => (f.id === featureId ? { ...f, attempts } : f)),
-  })
   const hint =
     attempts >= MAX_ATTEMPTS
       ? `${attempts} failed attempts. Stop and explain to a human (CLAUDE.md → Human in the loop), or block it.`
@@ -94,8 +101,8 @@ function verify(list, featureId) {
   fail(`${featureId} did not pass (attempt ${attempts}/${MAX_ATTEMPTS}). ${hint}`)
 }
 
-function check(list) {
-  assertNoDrift(list)
+function check({ list, ledger }) {
+  assertNoDrift(list, ledger)
   const prose = readFileSync(path('features.md'), 'utf8')
   const proseIds = new Set([...prose.matchAll(/\*\*ID:\*\*\s*(F\d+)/g)].map((m) => m[1]))
   const jsonIds = new Set(list.features.map((f) => f.id))
@@ -115,28 +122,76 @@ function check(list) {
   console.log(`✓ features: ${list.features.length} features, ledger and features.md agree`)
 }
 
-function print(list) {
-  for (const f of list.features) {
+function print(features) {
+  for (const f of features) {
     const extra = f.state === 'blocked' ? `  (${f.blockedReason})` : ''
-    console.log(`${f.id}  ${f.state.padEnd(11)} ${f.title}${extra}`)
+    console.log(`${f.id}  ${f.state.padEnd(11)} ${f.title}  [${f.owner}]${extra}`)
   }
 }
 
-const list = readList()
-if (command !== 'check') assertNoDrift(list) // check reports drift itself
+function setDefinition(state, featureId, change, ledgerLine) {
+  if (!state.list.features.some((f) => f.id === featureId))
+    fail(`${featureId} is not in features.json.`)
+  let next
+  try {
+    next = parseFeatureList({
+      ...state.list,
+      features: state.list.features.map((f) => (f.id === featureId ? { ...f, ...change } : f)),
+    })
+  } catch (error) {
+    fail(error.message)
+  }
+  writeList(next)
+  appendLedger({ id: featureId, ...ledgerLine })
+}
+
+// One-time move from v1 (state stored in features.json) to v2 (definitions + owner; state
+// only in the ledger). Every existing feature gets one owner; the ledger records it.
+function migrate() {
+  const raw = JSON.parse(readFileSync(path('features.json'), 'utf8'))
+  if (raw.version !== 1) fail(`features.json is already version ${raw.version}.`)
+  const owner = values.owner ?? caller()
+  let next
+  try {
+    next = parseFeatureList({
+      version: 2,
+      limits: { activePerOwner: 2 },
+      features: raw.features.map(({ id: fid, title, verify: proof, scope, change }) => ({
+        id: fid,
+        title,
+        owner,
+        verify: proof,
+        scope,
+        ...(change ? { change } : {}),
+      })),
+    })
+  } catch (error) {
+    fail(error.message)
+  }
+  writeList(next)
+  for (const f of next.features) appendLedger({ id: f.id, event: 'owner', owner })
+  console.log(`✓ features.json is version 2; ${next.features.length} features owned by ${owner}`)
+  process.exit(0)
+}
+if (command === 'migrate') migrate()
+
+const state = readFeatures()
+if (command !== 'check') assertNoDrift(state.list, state.ledger) // check reports drift itself
 
 switch (command) {
   case 'list':
-    print(list)
+    print(state.features)
     break
   case 'add': {
     const { id: newId, title, verify: proof, scope, change } = values
     if (!newId || !title || !proof || !scope) fail('add needs --id, --title, --verify and --scope.')
+    const owner = values.owner ?? caller()
     let next
     try {
-      next = addFeature(list, {
+      next = addFeature(state.list, {
         id: newId,
         title,
+        owner,
         verify: proof,
         scope: scope.split(',').map((s) => s.trim()),
         ...(change ? { change } : {}),
@@ -150,45 +205,43 @@ switch (command) {
       from: null,
       to: 'not_started',
       scope: next.features.at(-1).scope,
+      owner,
     })
-    console.log(`✓ added ${newId}. Add "**ID:** ${newId}" to its entry in features.md.`)
+    console.log(
+      `✓ added ${newId} (owner ${owner}). Add "**ID:** ${newId}" to its entry in features.md.`,
+    )
     break
   }
   case 'start':
-    move(list, id, 'active')
+    move(state, id, 'active')
     console.log(
-      `✓ ${id} is active. Its scope: ${list.features.find((f) => f.id === id).scope.join(', ')}`,
+      `✓ ${id} is active. Its scope: ${state.list.features.find((f) => f.id === id).scope.join(', ')}`,
     )
     break
   case 'block':
-    move(list, id, 'blocked', { reason: values.reason })
+    move(state, id, 'blocked', { reason: values.reason })
     console.log(`✓ ${id} is blocked`)
     break
   case 'verify':
-    verify(list, id)
+    verify(state, id)
     break
   case 'scope': {
     if (!values.add) fail('scope needs --add <folder-or-file>.')
-    const next = {
-      ...list,
-      features: list.features.map((f) =>
-        f.id === id ? { ...f, scope: [...f.scope, values.add] } : f,
-      ),
-    }
-    if (!list.features.some((f) => f.id === id)) fail(`${id} is not in features.json.`)
-    writeList(parseFeatureList(next))
-    appendLedger({
-      id,
-      from: null,
-      to: null,
-      scope: [...list.features.find((f) => f.id === id).scope, values.add],
-    })
+    const scope = [...(state.list.features.find((f) => f.id === id)?.scope ?? []), values.add]
+    setDefinition(state, id, { scope }, { from: null, to: null, scope })
     console.log(`✓ ${id} scope now includes ${values.add}`)
     break
   }
+  case 'owner':
+    if (!values.set) fail('owner needs --set <email>.')
+    setDefinition(state, id, { owner: values.set }, { event: 'owner', owner: values.set })
+    console.log(`✓ ${id} now belongs to ${values.set}`)
+    break
   case 'check':
-    check(list)
+    check(state)
     break
   default:
-    fail(`Unknown command "${command}". Commands: list, add, start, block, verify, scope, check.`)
+    fail(
+      `Unknown command "${command}". Commands: list, add, start, block, verify, scope, owner, check.`,
+    )
 }

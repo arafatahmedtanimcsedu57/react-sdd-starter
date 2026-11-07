@@ -194,7 +194,7 @@ same checks.
 | `npm run format`        | Prettier (write)                                              |
 | `npm run gen:api`       | Generate the API layer from an OpenAPI spec                   |
 | `npm run features`      | Feature list: `add`, `start`, `block`, `verify`, `check`      |
-| `npm run progress`      | Refresh the generated block in `PROGRESS.md` and print it     |
+| `npm run progress`      | Print features by owner and open changes (clock in/out)       |
 | `npm run scope`         | Changes outside the active feature's scope                    |
 | `npm run harness:check` | Feature list matches its ledger; `CLAUDE.md` stays short      |
 
@@ -203,8 +203,8 @@ same checks.
 | Path                  | What it is                                                             |
 | --------------------- | ---------------------------------------------------------------------- |
 | `features.md`         | **You own it.** What the app does, in plain words                      |
-| `features.json`       | Machine copy: proof command, scope, state (only `npm run features`)    |
-| `PROGRESS.md`         | Handoff note: where work stopped and what's next                       |
+| `features.json`       | Machine copy: owner, proof command, scope (only `npm run features`)    |
+| `PROGRESS.md`         | Handoff note, one section per developer: where work stopped, what next |
 | `DECISIONS.md`        | Why choices were made, so later sessions don't undo them               |
 | `scripts/harness/`    | The feature list, progress and scope scripts (+ their tests)           |
 | `architecture.md`     | **You own it.** Tech decisions, API sources, design links              |
