@@ -9,6 +9,14 @@ input=$(cat)
 . "$(dirname "$0")/lib.sh"
 cd "$(repo_root "$(printf '%s' "$input" | jq -r '.cwd // empty')")" || exit 0
 
+# SubagentStop also fires for read-only helpers (react-reviewer, codebase-explorer) that run
+# in the main checkout; they can't fix code. Only workers in a linked worktree get checked.
+if [ "$(printf '%s' "$input" | jq -r '.hook_event_name // empty')" = SubagentStop ] &&
+  [ "$(git rev-parse --absolute-git-dir 2>/dev/null)" = \
+    "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ]; then
+  exit 0
+fi
+
 # Wrong Node or stale node_modules makes every later check fail with a misleading stack
 # trace. Say so plainly instead; ready.mjs needs nothing installed to run.
 if ! out=$(node scripts/harness/ready.mjs 2>&1); then

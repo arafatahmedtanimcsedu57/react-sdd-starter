@@ -7,9 +7,16 @@ No UI.
 `.claude/hooks/lib.sh`:
 
 ```bash
-# repo_root <dir>: the git checkout (main or worktree) that <dir> belongs to.
+# repo_root <dir>: the checkout of this project (main or worktree) that <dir> belongs to.
+# Falls back to $CLAUDE_PROJECT_DIR when <dir> is empty, not in git, or in another repo.
 repo_root() {
-  git -C "${1:-.}" rev-parse --show-toplevel 2>/dev/null || printf '%s' "${CLAUDE_PROJECT_DIR:-.}"
+  local top
+  if [ -n "${1:-}" ] && top=$(git -C "$1" rev-parse --show-toplevel 2>/dev/null) &&
+    [ -f "$top/scripts/harness/ready.mjs" ]; then
+    printf '%s\n' "$top"
+  else
+    printf '%s\n' "${CLAUDE_PROJECT_DIR:-.}"
+  fi
 }
 ```
 
@@ -25,14 +32,18 @@ worker uses its own branch's copy of the harness.
 ## SubagentStop
 
 `settings.json` adds a `SubagentStop` entry pointing at `stop-check.sh`. The script already
-guards against loops with `stop_hook_active`, and with no changed `src/` files it exits after
-`ready` + `scope`.
+guards against loops with `stop_hook_active`. On `SubagentStop` it exits early unless the
+checkout is a linked worktree, so read-only helpers in the main checkout (`react-reviewer`,
+`codebase-explorer`) don't run tests they can't act on.
 
 ## `ready.mjs` and `node_modules`
 
-Look for `node_modules` from the root upwards and use the first one found — the same
-lookup Node and npx do. A worktree nested in the main checkout then reports the main
-install, and a lockfile mismatch is still caught against the worktree's `package-lock.json`.
+`findModulesRoot` (`env.mjs`) walks up from the checkout to the main checkout (parent of
+the shared `.git`) and returns the nearest folder with a real npm install
+(`node_modules/.package-lock.json`), the same packages Node resolves. A `node_modules`
+holding only tool caches (eslint/prettier create `node_modules/.cache`) is skipped; with no
+real install anywhere, the nearest `node_modules` is reported as "not installed by npm". A
+lockfile mismatch is still checked against the worktree's own `package-lock.json`.
 
 ## Proof
 

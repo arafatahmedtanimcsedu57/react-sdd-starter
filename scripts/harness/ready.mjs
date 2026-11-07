@@ -2,10 +2,11 @@
 // `engines` and node_modules against package-lock.json. Hooks run it first, so a broken
 // environment says "run npm ci" instead of a stack trace from deep inside a script.
 // Only node: built-ins here — it must work before anything is installed.
+import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkEnvironment, findUp, nvmrcMismatch } from './env.mjs'
+import { checkEnvironment, findModulesRoot, nvmrcMismatch } from './env.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (rel) => {
@@ -16,14 +17,19 @@ const packagesOf = (rel, base = ROOT) => {
   const file = join(base, rel)
   return existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')).packages ?? {}) : null
 }
-// Nearest npm install walking up, like Node: a worker worktree inside the main checkout
-// runs on the main checkout's install. A node_modules holding only tool caches (eslint and
-// prettier create node_modules/.cache) is skipped, as Node skips it when resolving packages;
-// if no folder has a real install, report the nearest node_modules as broken.
-const npmInstalled = (dir) => existsSync(join(dir, 'node_modules', '.package-lock.json'))
-const modulesRoot =
-  findUp(ROOT, npmInstalled, dirname) ??
-  findUp(ROOT, (dir) => existsSync(join(dir, 'node_modules')), dirname)
+// The main checkout (parent of the shared .git) bounds the walk up from a worker worktree.
+let repoTop
+try {
+  const common = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  }).trim()
+  repoTop = dirname(common)
+} catch {
+  repoTop = ROOT // not a git checkout: only look in this folder
+}
+const modulesRoot = findModulesRoot(ROOT, existsSync, dirname, repoTop)
 
 const nodeVersion = process.version
 const nvmrc = read('.nvmrc')?.trim() || null

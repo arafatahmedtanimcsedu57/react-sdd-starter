@@ -121,12 +121,26 @@ export function nvmrcMismatch(nodeVersion, nvmrc) {
 
 /**
  * The nearest folder, from `start` upwards, for which `has(dir)` is true — how Node and
- * npx find node_modules. A git worktree nested in the main checkout (where Claude Code puts
- * worker worktrees) uses the main checkout's install.
+ * npx find node_modules. Stops after `stopAt` (the repo) when given, so a stray install
+ * higher up (e.g. ~/node_modules) is never mistaken for this repo's.
  */
-export function findUp(start, has, parentOf) {
+export function findUp(start, has, parentOf, stopAt) {
   for (let dir = start; ; dir = parentOf(dir)) {
     if (has(dir)) return dir
-    if (parentOf(dir) === dir) return null
+    if (dir === stopAt || parentOf(dir) === dir) return null
   }
+}
+
+/**
+ * Where this checkout's node_modules is. A git worktree nested in the main checkout (where
+ * Claude Code puts worker worktrees) runs on the main checkout's install. A node_modules
+ * holding only tool caches (eslint and prettier create node_modules/.cache) is skipped, as
+ * Node skips it when resolving packages; with no real install anywhere, the nearest
+ * node_modules is returned so ready reports it as "not installed by npm".
+ */
+export function findModulesRoot(start, exists, parentOf, stopAt) {
+  return (
+    findUp(start, (dir) => exists(`${dir}/node_modules/.package-lock.json`), parentOf, stopAt) ??
+    findUp(start, (dir) => exists(`${dir}/node_modules`), parentOf, stopAt)
+  )
 }

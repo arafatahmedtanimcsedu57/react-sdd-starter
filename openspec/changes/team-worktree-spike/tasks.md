@@ -16,8 +16,8 @@ Estimated reviewable lines: ~90
 ## 3. Prove
 
 - [x] 3.1 Unit test: upward `node_modules` lookup (`scripts/harness/env.test.mjs`)
-- [ ] 3.2 Re-run the probe: type error reported in the worker; scope error on worker stop;
+- [x] 3.2 Re-run the probe: type error reported in the worker; scope error on worker stop;
       main checkout `git status` clean while it runs — results in `DECISIONS.md`
-- [ ] 3.3 `npm run check` green
+- [x] 3.3 `npm run check` green
 
 approved: arafatahmedtanimcsedu57, 2026-11-08
