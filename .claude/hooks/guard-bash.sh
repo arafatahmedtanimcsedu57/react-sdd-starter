@@ -5,9 +5,12 @@
 # `cd x && gh pr merge 3` slipped past it. Exit 2 blocks the call and tells Claude why.
 # GitHub branch protection is still the real backstop; this stops mistakes before it.
 set -u
-cmd=$(jq -r '.tool_input.command // empty')
+input=$(cat)
+cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
 [ -z "$cmd" ] && exit 0
-cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || true
+. "$(dirname "$0")/lib.sh"
+# Read the branch of the checkout the command runs in (a worker's worktree, not main).
+cd "$(repo_root "$(printf '%s' "$input" | jq -r '.cwd // empty')")" 2>/dev/null || true
 
 block() {
   printf 'Blocked: %s. Push a feature branch and open a PR; a human merges it (CLAUDE.md → Gates).\n' "$1" >&2

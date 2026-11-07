@@ -6,7 +6,8 @@
 set -u
 input=$(cat)
 [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false')" = "true" ] && exit 0
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
+. "$(dirname "$0")/lib.sh"
+cd "$(repo_root "$(printf '%s' "$input" | jq -r '.cwd // empty')")" || exit 0
 
 # Wrong Node or stale node_modules makes every later check fail with a misleading stack
 # trace. Say so plainly instead; ready.mjs needs nothing installed to run.

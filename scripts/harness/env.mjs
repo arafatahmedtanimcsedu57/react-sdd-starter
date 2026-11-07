@@ -118,3 +118,15 @@ export function nvmrcMismatch(nodeVersion, nvmrc) {
   }
   return `Node ${nodeVersion} is allowed, but .nvmrc pins ${nvmrc} (what CI uses). \`nvm use\` to match.`
 }
+
+/**
+ * The nearest folder, from `start` upwards, for which `has(dir)` is true — how Node and
+ * npx find node_modules. A git worktree nested in the main checkout (where Claude Code puts
+ * worker worktrees) uses the main checkout's install.
+ */
+export function findUp(start, has, parentOf) {
+  for (let dir = start; ; dir = parentOf(dir)) {
+    if (has(dir)) return dir
+    if (parentOf(dir) === dir) return null
+  }
+}

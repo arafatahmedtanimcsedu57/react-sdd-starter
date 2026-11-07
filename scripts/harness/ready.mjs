@@ -5,17 +5,25 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkEnvironment, nvmrcMismatch } from './env.mjs'
+import { checkEnvironment, findUp, nvmrcMismatch } from './env.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (rel) => {
   const file = join(ROOT, rel)
   return existsSync(file) ? readFileSync(file, 'utf8') : null
 }
-const packagesOf = (rel) => {
-  const text = read(rel)
-  return text ? (JSON.parse(text).packages ?? {}) : null
+const packagesOf = (rel, base = ROOT) => {
+  const file = join(base, rel)
+  return existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')).packages ?? {}) : null
 }
+// Nearest npm install walking up, like Node: a worker worktree inside the main checkout
+// runs on the main checkout's install. A node_modules holding only tool caches (eslint and
+// prettier create node_modules/.cache) is skipped, as Node skips it when resolving packages;
+// if no folder has a real install, report the nearest node_modules as broken.
+const npmInstalled = (dir) => existsSync(join(dir, 'node_modules', '.package-lock.json'))
+const modulesRoot =
+  findUp(ROOT, npmInstalled, dirname) ??
+  findUp(ROOT, (dir) => existsSync(join(dir, 'node_modules')), dirname)
 
 const nodeVersion = process.version
 const nvmrc = read('.nvmrc')?.trim() || null
@@ -24,9 +32,9 @@ const problems = checkEnvironment({
   engines: JSON.parse(read('package.json')).engines?.node,
   nvmrc,
   lock: packagesOf('package-lock.json'),
-  nodeModules: existsSync(join(ROOT, 'node_modules')),
+  nodeModules: modulesRoot !== null,
   // npm's own record of what it installed; missing = interrupted, or not installed by npm.
-  installed: packagesOf('node_modules/.package-lock.json'),
+  installed: modulesRoot ? packagesOf('node_modules/.package-lock.json', modulesRoot) : null,
 })
 
 if (problems.length) {
@@ -35,4 +43,5 @@ if (problems.length) {
 }
 const warning = nvmrcMismatch(nodeVersion, nvmrc)
 if (warning) console.warn(`⚠ ${warning}`)
-console.log(`✓ ready: Node ${nodeVersion}, node_modules matches package-lock.json`)
+const from = modulesRoot && modulesRoot !== ROOT ? ` (node_modules from ${modulesRoot})` : ''
+console.log(`✓ ready: Node ${nodeVersion}, node_modules matches package-lock.json${from}`)

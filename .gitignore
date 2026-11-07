@@ -12,3 +12,6 @@ blob-report
 
 # graphify knowledge graph (local)
 graphify-out/
+
+# worker worktrees (Claude Code background agents)
+.claude/worktrees/

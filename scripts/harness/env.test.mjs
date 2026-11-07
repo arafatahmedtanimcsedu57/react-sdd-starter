@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { checkEnvironment, findInstallDrift, nvmrcMismatch, satisfies } from './env.mjs'
+import { checkEnvironment, findInstallDrift, findUp, nvmrcMismatch, satisfies } from './env.mjs'
 
 describe('satisfies', () => {
   const engines = '^22.22.2 || >=24.15.0'
@@ -116,5 +116,28 @@ describe('nvmrcMismatch', () => {
     expect(nvmrcMismatch('v22.22.2', 'lts/*')).toBeNull()
     expect(nvmrcMismatch('v22.22.2', null)).toBeNull()
     expect(nvmrcMismatch('v22.22.2', '24.x')).toBeNull()
+  })
+})
+
+describe('findUp', () => {
+  const parentOf = (dir) => dir.replace(/\/[^/]+$/, '') || '/'
+  const has = (dirs) => (dir) => dirs.includes(dir)
+
+  it('finds node_modules in the checkout itself', () => {
+    expect(findUp('/repo', has(['/repo']), parentOf)).toBe('/repo')
+  })
+
+  it('finds the main checkout install from a nested worktree, like Node does', () => {
+    const worktree = '/repo/.claude/worktrees/agent-1'
+    expect(findUp(worktree, has(['/repo']), parentOf)).toBe('/repo')
+  })
+
+  it('prefers the nearest install', () => {
+    const worktree = '/repo/.claude/worktrees/agent-1'
+    expect(findUp(worktree, has(['/repo', worktree]), parentOf)).toBe(worktree)
+  })
+
+  it('returns null when no folder up to the root has one', () => {
+    expect(findUp('/repo/a', has([]), parentOf)).toBeNull()
   })
 })
