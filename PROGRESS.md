@@ -25,10 +25,9 @@ Things that affect everyone. Add, don't rewrite.
 
 ### Current work
 
-- `chore/team-cross-review` (slice 4 of `team-orchestration`, Gate 1 approved): `npm run
-team:check`, `TEAM.md`, CODEOWNERS for both developers, PR size excludes `*.test.mjs`.
-  react-reviewer PASS (its 4 strongly-recommended fixes applied). PR open. This completes
-  the four slices of `team-orchestration`.
+- `team-orchestration` is shipped: all four slices merged (#30, #31, #32, #34) and their
+  five OpenSpec changes archived under `openspec/changes/archive/2026-11-08-team-*`
+  (this PR). No open changes.
 - Harness gaps 3 + 4 (enforced clock-out + junk check; trace of hook/verify runs) still open;
   `.claude/traces/` is untracked and was left alone.
 

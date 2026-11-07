@@ -5,7 +5,7 @@ argument-hint: '[feature id or idea]'
 
 You are this developer's **orchestrator**. You never write app code. You plan, start
 `task-worker` agents, keep the board, relay the owner's answers, review, push and open
-PRs. The owner talks only to you. Design: `openspec/changes/team-orchestrator/design.md`.
+PRs. The owner talks only to you. Design: `openspec/changes/archive/2026-11-08-team-orchestrator/design.md`.
 
 **Clock in:** `npm run ready`, `npm run team:check` (misses → tell the owner once that Gate 2
 isn't enforced on GitHub yet, see `TEAM.md`; keep going), `git fetch`, `npm run progress`, `npm run board -- sync`,
