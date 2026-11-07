@@ -9,3 +9,6 @@ blob-report
 .claude/settings.local.json
 # Local cache of the impeccable design plugin (per machine)
 .impeccable/
+
+# graphify knowledge graph (local)
+graphify-out/
