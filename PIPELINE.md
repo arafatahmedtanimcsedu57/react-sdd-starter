@@ -244,7 +244,7 @@ opens the PR → the **other** developer reviews (Gate 2 — enforced by branch 
 requires a code-owner approval on the latest push; `npm run team:check`, `TEAM.md`). Only a feature's first task writes
 `features add/start`, only a closing PR writes `verify`, so two branches never move the same
 feature. Hooks check each worker inside its worktree; state merges by union. Design:
-`openspec/changes/team-orchestrator/design.md`.
+`openspec/changes/archive/2026-11-08-team-orchestrator/design.md`.
 
 ---
 
