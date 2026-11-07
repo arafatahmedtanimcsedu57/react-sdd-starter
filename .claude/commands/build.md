@@ -38,7 +38,7 @@ exactly one change is open, use it; otherwise list them and ask.
 3. **Snapshot** the approved page into `design/` (artboards, `canvas.json`, `tokens.json`).
    If the design system's tokens changed, update the styling layer's tokens first.
 4. **Implement** on branch `feat/<change-name>`: first `npm run features -- start <id>`
-   (WIP=1 — it refuses while another feature is active), then the `openspec-apply-change` skill,
+   (only its owner can, with at most 2 active per owner), then the `openspec-apply-change` skill,
    task by task with tests, matching the artboards. Run `react-reviewer` after a chunk. If the
    conversation is long, ask the human to `/clear` and run `/build <change-name>` again (it
    resumes: approved line present → read `notes.md`, then skip to the first unticked task).

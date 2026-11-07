@@ -2,7 +2,7 @@
 import { execFileSync } from 'node:child_process'
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { parseFeatureList } from './lib.mjs'
+import { parseFeatureList, replayFeatures } from './lib.mjs'
 
 export const ROOT = execFileSync('git', ['rev-parse', '--show-toplevel'], {
   encoding: 'utf8',
@@ -40,7 +40,14 @@ export function fail(message) {
 export function readList() {
   if (!existsSync(path(FEATURES))) fail(`${FEATURES} is missing.`)
   try {
-    return parseFeatureList(JSON.parse(readFileSync(path(FEATURES), 'utf8')))
+    const raw = JSON.parse(readFileSync(path(FEATURES), 'utf8'))
+    if (raw.version === 1) {
+      return fail(
+        `${FEATURES} is version 1 (state stored inside). The harness now keeps state only in ` +
+          `the ledger.\n  FIX (human): npm run features -- migrate`,
+      )
+    }
+    return parseFeatureList(raw)
   } catch (error) {
     return fail(error.message)
   }
@@ -67,10 +74,23 @@ export function readLedger() {
     .map((line) => JSON.parse(line))
 }
 
+/** The developer running the command: `git config user.email`, or '' when unset. */
+export function me() {
+  return git('config', 'user.email')
+}
+
+/** Definitions, ledger and the replayed features (definition + state) in one read. */
+export function readFeatures() {
+  const list = readList()
+  const ledger = readLedger()
+  return { list, ledger, features: replayFeatures(list, ledger) }
+}
+
 export function appendLedger(entry) {
   const line = {
     at: new Date().toISOString(),
     commit: git('rev-parse', '--short', 'HEAD'),
+    by: me() || 'unknown',
     ...entry,
   }
   appendFileSync(path(LEDGER), `${JSON.stringify(line)}\n`)

@@ -5,6 +5,10 @@ re-decide it differently. Newest first. One entry per decision: what, why, what 
 rejected. Stack-level decisions live in `architecture.md`; this file is for choices made
 while building (a library approach, a trade-off, a workaround).
 
+**Append-only.** This file merges by union (`.gitattributes`), which keeps both sides when
+two branches add entries — but also when two branches edit the _same_ line, silently. So
+never edit an existing entry: supersede it with a new one ("Supersedes: 2026-10-05 …").
+
 Format:
 
 ```
@@ -15,6 +19,31 @@ Format:
 ```
 
 ---
+
+## 2026-11-08: Feature state lives only in the ledger, which merges by union; features have owners
+
+- Why: with two developers every `start` / `verify` edited `features.json` and every PR
+  conflicted there and at the end of the ledger. Now `features.json` holds definitions
+  (id, title, owner, proof, scope) and changes rarely; state, attempts and evidence are
+  replayed from `features.ledger.jsonl`, which `.gitattributes` merges by union (also
+  `DECISIONS.md`). Replay is per feature, so line order from two owners doesn't matter.
+  Global WIP=1 became "only the owner moves a feature, max `limits.activePerOwner` (2)";
+  the scope check uses the feature of the change this branch builds. `PROGRESS.md` lost
+  its generated block (printed by `npm run progress` now) and has one section per owner.
+- Proof: `merge.test.mjs` runs a real `git merge` of two branches that append ledger lines
+  and add decisions — it conflicts without the attributes and merges cleanly with them.
+- Rejected: one file per feature / decision — new top-level folders, every script
+  rewritten; a custom merge driver for `PROGRESS.md` — every clone must install it, and a
+  missing one silently falls back to a conflicting merge; keeping global WIP=1.
+- Limit: two developers adding a feature at the same moment can still conflict in
+  `features.json` (both append to the array) — keep both. Two branches both running `scope`/`owner` on one
+  feature: after keeping both in `features.json`, the owner re-runs the command for the
+  side the ledger lost, so a fresh line matches. `features check` also rejects ledger lines
+  the CLI wouldn't write (wrong `from`, no evidence, not the owner, a forked history). Owner checks trust
+  `git config user.email`; PR review of the ledger is the real gate.
+- Unverified: whether GitHub's own merge button honours `merge=union`. If a PR shows a
+  conflict in the ledger or `DECISIONS.md`, `git merge origin/master` locally (it does)
+  and push.
 
 ## 2026-11-08: Hooks resolve the checkout from the work, not `$CLAUDE_PROJECT_DIR`
 

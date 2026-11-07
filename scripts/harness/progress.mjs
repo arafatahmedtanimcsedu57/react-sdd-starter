@@ -1,10 +1,10 @@
-// Rewrites the generated block at the top of PROGRESS.md from the repo's real state
-// (features.json + open OpenSpec changes) and prints it. Run it at clock-in and clock-out.
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { renderProgressBlock, replaceAutoBlock, summariseTasks } from './lib.mjs'
-import { fail, format, git, path, readList } from './io.mjs'
+// Prints the team summary (features by owner + open OpenSpec changes) from the repo's real
+// state. Run it at clock-in and clock-out. It no longer writes into PROGRESS.md: a generated
+// block there was rewritten by every developer's clock-out and always conflicted.
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { findLedgerDrift, renderProgress, summariseTasks } from './lib.mjs'
+import { fail, path, readFeatures } from './io.mjs'
 
-const PROGRESS = 'PROGRESS.md'
 const CHANGES = 'openspec/changes'
 
 function openChanges() {
@@ -18,19 +18,8 @@ function openChanges() {
     }))
 }
 
-const block = renderProgressBlock({
-  date: new Date().toISOString().slice(0, 10),
-  branch: git('rev-parse', '--abbrev-ref', 'HEAD') || 'unknown',
-  features: readList(),
-  changes: openChanges(),
-})
-
-if (!existsSync(path(PROGRESS))) fail(`${PROGRESS} is missing.`)
-try {
-  writeFileSync(path(PROGRESS), replaceAutoBlock(readFileSync(path(PROGRESS), 'utf8'), block))
-} catch (error) {
-  fail(error.message)
-}
-format(PROGRESS)
-console.log(block)
-console.log('\nThen read the rest of PROGRESS.md and DECISIONS.md.')
+const { list, ledger, features } = readFeatures()
+const drift = findLedgerDrift(list, ledger)
+if (drift.length) fail(`features.json and its ledger disagree:\n  ${drift.join('\n  ')}`)
+console.log(renderProgress({ features, changes: openChanges() }))
+console.log('\nThen read your section of PROGRESS.md, and DECISIONS.md.')

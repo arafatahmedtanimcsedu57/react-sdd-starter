@@ -46,7 +46,7 @@ The fixed folder structure (authoritative copy lives in `CLAUDE.md`):
 <project>/
 ├── CLAUDE.md                     # always-loaded backbone: commands + conventions + rules + structure
 ├── features.md                   # human: what we're building
-├── features.json                 # machine copy: id, proof command, scope, state (+ .ledger.jsonl)
+├── features.json                 # machine copy: id, owner, proof, scope; state in .ledger.jsonl
 ├── PROGRESS.md  DECISIONS.md     # session handoff + why choices were made
 ├── scripts/harness/              # npm run features / progress / scope / harness:check
 ├── architecture.md               # human: tech decisions + design tokens + styling/UI choice
@@ -139,8 +139,9 @@ npm run features -- verify <id>   # check + the feature's proof command (with it
 ```
 
 Around every session: **clock in** (`npm run progress`, read `PROGRESS.md` +
-`DECISIONS.md`) and **clock out** (update `PROGRESS.md`, commit). One feature is active at a
-time, and the Stop hook fails a turn that edits files outside that feature's scope.
+`DECISIONS.md`) and **clock out** (update your `PROGRESS.md` section, commit). Each feature has
+an owner; an owner has at most two active, and the Stop hook fails a turn that edits files
+outside the scope of the feature the branch builds.
 
 ## Phase 5 — Verify + Ship + Gate 2
 
