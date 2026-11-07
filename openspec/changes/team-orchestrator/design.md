@@ -106,7 +106,7 @@ first), stop and ask instead of guessing, commit before every stop, last line `S
 ## STATUS line
 
 ```
-STATUS: <drafting|needs-you|coding|checking|pr-open|blocked|done> | <need or -> | <one line>
+STATUS: <drafting|needs-you|coding|checking|ready|blocked> | <gate1|question|-> | <one line>
 ```
 
 `parseStatus` (lib) turns it into `{ status, need, note }`; a stop without one is shown as

@@ -13,9 +13,10 @@ brief doesn't settle something, stop and ask; never guess.
 
 ## Rules
 
-- Work only in this worktree (your `cwd`) and only in the brief's **folders**, plus
-  `openspec/changes/<task>/`. Hooks check typecheck, scope and related tests on every edit
-  and every stop — fix what they report, never work around it.
+- Work only in this worktree (your `cwd`) and only in the brief's **paths**, plus
+  `openspec/changes/<task>/`. Hooks check typecheck, the feature's (wider) scope and
+  related tests on every edit and every stop — fix what they report, never work around
+  it. The orchestrator checks your exact paths before review.
 - **Never write an `approved:` line**, never edit `.claude/orchestra/`, `features.json` or
   `features.ledger.jsonl` — except: if the brief says you are the feature's **first task**,
   run `npm run features -- add …` / `start <id>` exactly as the brief gives them.
@@ -27,7 +28,8 @@ brief doesn't settle something, stop and ask; never guess.
 
 ## Steps
 
-1. `git switch -c <branch from the brief>` (if it already exists — you are resuming:
+1. `git switch -c <branch> <base>` with the branch and base from the brief (if the branch
+   already exists — you are resuming:
    `git switch <branch>`, read `openspec/changes/<task>/tasks.md`, continue from the first
    unticked task).
 2. **Draft** `openspec/changes/<task>/proposal.md` (with `Feature: <id>` and a risk tier),
@@ -42,6 +44,6 @@ brief doesn't settle something, stop and ask; never guess.
 
 ## Last line of every stop
 
-```
+Plain text, no backticks or bold:
+
 STATUS: <drafting|needs-you|coding|checking|ready|blocked> | <gate1|question|-> | <one line>
-```

@@ -361,7 +361,8 @@ export const TASK_STATUSES = [
 // merged — `ready` (built, waiting for the orchestrator's review + PR) and `pr-open` too —
 // so a new task never edits the same files and conflicts at merge.
 const RUNNING = ['drafting', 'needs-you', 'coding', 'checking']
-const HOLDS_FOLDERS = [...RUNNING, 'ready', 'pr-open']
+// `blocked` too: a worker may have stopped half-way through editing them.
+const HOLDS_FOLDERS = [...RUNNING, 'ready', 'pr-open', 'blocked']
 const DONE = ['merged', 'finished']
 const WORKER_STATUSES = ['drafting', 'needs-you', 'coding', 'checking', 'ready', 'blocked']
 
@@ -403,15 +404,55 @@ export function parseBoard(data) {
     const unknown = t.dependsOn.filter((d) => !ids.has(d))
     if (unknown.length) throw new Error(`${t.id} depends on unknown task(s): ${unknown.join(', ')}`)
   }
-  const firsts = tasks.filter((t) => t.first).map((t) => t.feature)
-  const twice = firsts.find((f, i) => firsts.indexOf(f) !== i)
-  if (twice) throw new Error(`${twice} has more than one first task; only one may start it`)
+  const firsts = tasks.filter((t) => t.first)
+  const twice = firsts.find((f, i) => firsts.findIndex((x) => x.feature === f.feature) !== i)
+  if (twice) throw new Error(`${twice.feature} has more than one first task; only one may start it`)
+  // The first task adds/starts the feature; until it exists on the branch a worker starts
+  // from, that worker's scope check fails. So every other task builds on it.
+  for (const first of firsts) {
+    const loose = tasks.filter(
+      (t) => t.feature === first.feature && t.id !== first.id && !t.dependsOn.includes(first.id),
+    )
+    if (loose.length) {
+      throw new Error(
+        `${loose.map((t) => t.id).join(', ')} must depend on ${first.id}, the first task of ${first.feature}`,
+      )
+    }
+  }
   return result.data
+}
+
+const configSchema = z.object({ maxWorkers: z.number().int().min(1).max(8).default(4) })
+
+/** `.claude/orchestra.json`, validated. */
+export function parseOrchestraConfig(data) {
+  const result = configSchema.safeParse(data ?? {})
+  if (!result.success) {
+    const issues = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`)
+    throw new Error(`.claude/orchestra.json is invalid:\n  ${issues.join('\n  ')}`)
+  }
+  return result.data
+}
+
+/**
+ * Files a worker's branch changed outside its task: its folders, its own OpenSpec change
+ * and — for the feature's first task only — the feature list. The hooks check the wider
+ * feature scope; this is checked by the orchestrator before it reviews and pushes.
+ */
+export function taskOutOfScope(files, task) {
+  const own = [`openspec/changes/${task.id}/`]
+  if (task.first) own.push('features.md', 'features.json', 'features.ledger.jsonl')
+  return findOutOfScope(files, task.folders, own)
 }
 
 /** `STATUS: <status> | <need or -> | <note>` — the last such line in a worker's stop. */
 export function parseStatus(text) {
-  const lines = [...String(text).matchAll(/^STATUS:\s*([\w-]+)\s*\|\s*([^|\n]*?)\s*\|\s*(.*)$/gm)]
+  // Tolerates the line wrapped in backticks or bold, as a model may echo the template.
+  const lines = [
+    ...String(text).matchAll(
+      /^[\s`*]*STATUS:[*`]*\s*([\w-]+)\s*\|\s*([^|\n]*?)\s*\|\s*(.*?)[\s`*]*$/gm,
+    ),
+  ]
   const last = lines.at(-1)
   if (!last || !WORKER_STATUSES.includes(last[1])) return null
   const need = last[2] && last[2] !== '-' ? last[2] : undefined

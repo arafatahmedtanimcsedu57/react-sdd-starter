@@ -1,6 +1,14 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { parseBoard, parseStatus, renderBoard, runnableTasks, whyWaiting } from './lib.mjs'
+import {
+  parseBoard,
+  parseOrchestraConfig,
+  parseStatus,
+  renderBoard,
+  runnableTasks,
+  taskOutOfScope,
+  whyWaiting,
+} from './lib.mjs'
 
 const task = (id, over = {}) => ({
   id,
@@ -30,6 +38,15 @@ describe('parseBoard', () => {
     expect(() => board(task('a'), task('a'))).toThrow(/duplicate task: a/)
   })
 
+  it('requires every other task of a feature to depend on its first task', () => {
+    expect(() => board(task('kickoff', { first: true }), task('form'))).toThrow(
+      /form must depend on kickoff, the first task of F03/,
+    )
+    expect(
+      board(task('kickoff', { first: true }), task('form', { dependsOn: ['kickoff'] })).tasks,
+    ).toHaveLength(2)
+  })
+
   it('allows only one first task per feature', () => {
     expect(() => board(task('a', { first: true }), task('b', { first: true }))).toThrow(
       /F03 has more than one first task/,
@@ -46,6 +63,14 @@ describe('parseStatus', () => {
       need: 'gate1',
       note: 'tasks.md ready',
     })
+  })
+
+  it('tolerates the line wrapped in backticks or bold', () => {
+    expect(parseStatus('`STATUS: ready | - | check green`')).toEqual({
+      status: 'ready',
+      note: 'check green',
+    })
+    expect(parseStatus('**STATUS:** coding | - | 2/5')).toEqual({ status: 'coding', note: '2/5' })
   })
 
   it('treats "-" as no need', () => {
@@ -111,6 +136,44 @@ describe('folders held until merge', () => {
     const b = board(task('a', { ...shared, status: 'pr-open' }), task('b', shared), task('c'))
     expect(runnableTasks(b, { maxWorkers: 1 })).toEqual(['c'])
     expect(whyWaiting(b.tasks[1], b.tasks, config)).toBe('shares src/routes with A')
+  })
+})
+
+describe('blocked tasks', () => {
+  it('keep holding their folders — the worker may have stopped mid-edit', () => {
+    const shared = { folders: ['src/routes'] }
+    const b = board(task('a', { ...shared, status: 'blocked' }), task('b', shared))
+    expect(runnableTasks(b, config)).toEqual([])
+  })
+})
+
+describe('taskOutOfScope', () => {
+  const t = task('login-form', { folders: ['src/features/auth/LoginForm'] })
+
+  it('allows the task folders and its own change only', () => {
+    const files = [
+      'src/features/auth/LoginForm/LoginForm.tsx',
+      'openspec/changes/login-form/tasks.md',
+      'src/features/auth/Register/Register.tsx',
+      'openspec/changes/other/tasks.md',
+      'features.json',
+    ]
+    expect(taskOutOfScope(files, t)).toEqual([
+      'src/features/auth/Register/Register.tsx',
+      'openspec/changes/other/tasks.md',
+      'features.json',
+    ])
+  })
+
+  it('lets only the first task touch the feature list', () => {
+    expect(taskOutOfScope(['features.json'], { ...t, first: true })).toEqual([])
+  })
+})
+
+describe('parseOrchestraConfig', () => {
+  it('defaults and validates the worker cap', () => {
+    expect(parseOrchestraConfig(undefined)).toEqual({ maxWorkers: 4 })
+    expect(() => parseOrchestraConfig({ maxWorkers: 0 })).toThrow(/maxWorkers/)
   })
 })
 

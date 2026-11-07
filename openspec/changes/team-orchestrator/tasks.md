@@ -5,7 +5,7 @@ Estimated reviewable lines: ~380 (plus ~200 test lines CI currently also counts)
 - [x] 1.1 Board schema (Zod) + `parseStatus(text)` for the STATUS line
 - [x] 1.2 `runnableTasks(board, config)`: deps, contract-only deps, folder overlap, worker cap
 - [x] 1.3 `renderBoard(board, prs)`: groups by feature, readable names, "Needs you" queue
-- [x] 1.4 Tests for 1.1–1.3 (`scripts/harness/lib.test.mjs`)
+- [x] 1.4 Tests for 1.1–1.3 (`scripts/harness/board.test.mjs`, `board.cli.test.mjs`)
 
 ## 2. CLI
 

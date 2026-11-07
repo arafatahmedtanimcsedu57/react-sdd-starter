@@ -69,4 +69,21 @@ describe('guard-bash.sh', () => {
     expect(guard('git push').status).toBe(0)
     git('branch', '-q', '--unset-upstream')
   })
+
+  it('reads the branch and push target of the checkout named by git -C', () => {
+    const wt = `${dir}-wt`
+    git('worktree', 'add', '-q', '-b', 'feat/f03/other', wt, MAIN)
+    execFileSync('git', ['-C', wt, 'branch', '-q', `--set-upstream-to=origin/${MAIN}`])
+    expect(guard(`git -C ${wt} push`, upstreamPush).status).toBe(2)
+    expect(guard(`git -C ${wt} push -u origin feat/f03/other`, upstreamPush).status).toBe(0)
+    git('worktree', 'remove', '--force', wt)
+  })
+
+  it('does not treat pushing tags or deleting a feature branch as a push to the branch', () => {
+    git('branch', '-q', `--set-upstream-to=origin/${MAIN}`)
+    expect(guard('git push origin --tags', upstreamPush).status).toBe(0)
+    expect(guard('git push origin --delete feat/old', upstreamPush).status).toBe(0)
+    expect(guard(`git push origin --delete ${MAIN}`, upstreamPush).status).toBe(2)
+    git('branch', '-q', '--unset-upstream')
+  })
 })
