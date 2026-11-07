@@ -76,6 +76,8 @@ describe('guard-bash.sh', () => {
     execFileSync('git', ['-C', wt, 'branch', '-q', `--set-upstream-to=origin/${MAIN}`])
     expect(guard(`git -C ${wt} push`, upstreamPush).status).toBe(2)
     expect(guard(`git -C ${wt} push -u origin feat/f03/other`, upstreamPush).status).toBe(0)
+    expect(guard(`git -C "${wt}" push`).stderr).toMatch(/quoted git -C path/)
+    expect(guard(`git -C "${wt}" push -u origin feat/f03/other`).status).toBe(0)
     git('worktree', 'remove', '--force', wt)
   })
 

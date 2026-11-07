@@ -28,6 +28,6 @@ Estimated reviewable lines: ~380 (plus ~200 test lines CI currently also counts)
 - [x] 5.2 `PIPELINE.md`, `README.md`: "Working as a team" with `/orchestrate`
 - [x] 5.3 Dry run: `/orchestrate` on a throwaway feature plans 2 tasks, starts 1 worker, the
       worker stops at Gate 1 with a STATUS line, the board shows "Needs you" — then clean up
-- [ ] 5.4 `DECISIONS.md` entry; `npm run check` green; react-reviewer PASS
+- [x] 5.4 `DECISIONS.md` entry; `npm run check` green; react-reviewer PASS
 
 approved: arafatahmedtanimcsedu57, 2026-11-08

@@ -47,12 +47,12 @@ only what needs them, numbered, each with your recommendation — batch them.
   `approved: <owner's name>, <date>`, commit there, resume the worker ("approved — build
   it"). "change <id>: …" → relay it.
 - **question** — relay the owner's answer to the worker.
-- **ready** — `npm run board -- check <id>` (only its own paths changed; else back to the
-  worker), then `react-reviewer` on that worktree (FAIL → findings back to the worker).
-  Stacked on an open PR → wait until that one is merged, then have the worker rebase on
-  `origin/master`. PASS → `git -C <worktree> push -u origin <branch>`, `gh pr create`
-  (template filled, reviewer: the other developer), `npm run board -- set <id> --status
-pr-open --pr <n>`.
+- **ready** — stacked on a PR that is still open → wait until it is merged, then have the
+  worker run `git rebase --onto origin/master <dependency branch>`. Then
+  `npm run board -- check <id>` (only its own paths changed; else back to the worker) and
+  `react-reviewer` on that worktree (FAIL → findings back to the worker). PASS →
+  `git -C <worktree> push -u origin <branch>`, `gh pr create` (template filled, reviewer:
+  the other developer), `npm run board -- set <id> --status pr-open --pr <n>`.
 - **blocked / no STATUS line** — ask the worker what it needs; tell the owner if it's theirs.
 
 After each change, start what `npm run board -- next` allows.
