@@ -16,6 +16,18 @@ Format:
 
 ---
 
+## 2026-11-08: Team work runs through one orchestrator per developer, one worker per task
+
+- Why: two developers (Login/Registration vs Dashboard + Profile) each run many tasks in
+  parallel. One orchestrator session per developer starts a background worker per task in
+  its own git worktree, keeps a board with readable names, and is the only place the owner
+  answers questions and approvals. Design: `openspec/changes/team-orchestration/`.
+- Human choices: workers start automatically (not terminals opened by hand); Gate 1 is per
+  task, not per feature; each developer's PRs are reviewed by the other.
+- Rejected: one file per feature/decision for conflict-free state — union merge of the
+  ledger and `DECISIONS.md` does the same with far less churn; orchestrators messaging each
+  other — git is the only reliable channel between two machines.
+
 ## 2026-10-06: Project rules run as ESLint `no-restricted-syntax`, each message with a FIX
 
 - Why: rules that only live in `CLAUDE.md` get missed; a lint error lands in the same turn
