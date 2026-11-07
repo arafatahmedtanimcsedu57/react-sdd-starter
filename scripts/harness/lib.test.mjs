@@ -5,12 +5,14 @@ import {
   changesTouched,
   checkInstructions,
   checkProgressDoc,
+  findLedgerAnomalies,
   findLedgerDrift,
   findOutOfScope,
   parseFeatureList,
   proposalFeature,
   renderProgress,
   replayFeatures,
+  resolveChangeFeatures,
   scopeForBranch,
   summariseTasks,
   transition,
@@ -222,9 +224,120 @@ describe('findLedgerDrift', () => {
     expect(findLedgerDrift(list(feature({ owner: X })), handedOver)).toEqual([])
   })
 
+  it('reports a feature whose scope the ledger never recorded', () => {
+    const noScope = [{ id: 'F01', from: null, to: 'not_started', owner: ME }]
+    expect(findLedgerDrift(list(feature()), noScope)).toEqual(['F01 has no scope in the ledger'])
+  })
+
+  it('includes ledger history problems', () => {
+    const forged = [...added('F01'), { id: 'F01', from: 'not_started', to: 'passing', by: ME }]
+    expect(findLedgerDrift(list(feature()), forged).join('\n')).toMatch(/not allowed/)
+  })
+
   it('reports a feature whose owner the ledger never recorded', () => {
     const legacy = [{ id: 'F01', from: null, to: 'not_started', scope: ['src/routes'] }]
     expect(findLedgerDrift(list(feature()), legacy)).toEqual(['F01 has no owner in the ledger'])
+  })
+})
+
+describe('findLedgerAnomalies', () => {
+  const by = (line, who = ME) => ({ ...line, by: who })
+  const history = [
+    by({ id: 'F01', from: null, to: 'not_started', scope: ['src/routes'], owner: ME }),
+    by({ id: 'F01', from: 'not_started', to: 'active' }),
+    by({ id: 'F01', event: 'verify_failed' }),
+    by({ id: 'F01', from: 'active', to: 'passing', evidence: { commit: 'a', at: 't' } }),
+  ]
+
+  it('accepts a history written by the CLI', () => {
+    expect(findLedgerAnomalies(history)).toEqual([])
+  })
+
+  it('accepts legacy lines without "by" before the first line that has one', () => {
+    const legacy = [
+      { id: 'F01', from: null, to: 'not_started', scope: ['src/routes'] },
+      { id: 'F01', from: 'not_started', to: 'active' },
+      { id: 'F01', from: 'active', to: 'passing', commit: 'c', at: 't' },
+      by({ id: 'F01', event: 'owner', owner: ME }),
+    ]
+    expect(findLedgerAnomalies(legacy)).toEqual([])
+  })
+
+  it('flags a hand-appended line with no "by"', () => {
+    const forged = [...history.slice(0, 2), { id: 'F01', from: 'active', to: 'passing' }]
+    expect(findLedgerAnomalies(forged)).toContain(
+      'ledger line 3 (F01) has no "by" — written by hand?',
+    )
+  })
+
+  it('flags passing without evidence, and a move by someone other than the owner', () => {
+    const lines = [...history.slice(0, 2), by({ id: 'F01', from: 'active', to: 'passing' }, X)]
+    expect(findLedgerAnomalies(lines)).toEqual([
+      'ledger line 3 (F01): passing without evidence from a verify run',
+      'ledger line 3 (F01): moved by x@example.com, not the owner me@example.com',
+    ])
+  })
+
+  it('flags a history that forked on two branches (union merge kept both moves)', () => {
+    const forked = [
+      ...history.slice(0, 2),
+      by({ id: 'F01', from: 'active', to: 'blocked', reason: 'r' }),
+      by({ id: 'F01', from: 'active', to: 'passing', evidence: { commit: 'a', at: 't' } }),
+    ]
+    expect(findLedgerAnomalies(forked)).toEqual([
+      'ledger line 4 (F01): moves from "active" but the feature was "blocked" (forked or hand-written history)',
+      'ledger line 4 (F01): blocked → passing is not allowed',
+    ])
+  })
+
+  it('flags a hand-over or scope change by someone other than the owner', () => {
+    const lines = [
+      history[0],
+      by({ id: 'F01', from: null, to: null, scope: ['src'] }, X),
+      by({ id: 'F01', event: 'owner', owner: X }, X),
+    ]
+    expect(findLedgerAnomalies(lines)).toEqual([
+      'ledger line 2 (F01): scope changed by x@example.com, not the owner me@example.com',
+      'ledger line 3 (F01): owner changed by x@example.com, not the owner me@example.com',
+    ])
+  })
+})
+
+describe('resolveChangeFeatures', () => {
+  const features = [feature({ id: 'F03' })]
+
+  it('returns the features named by the changes, skipping "Feature: none"', () => {
+    const proposals = [
+      { name: 'login-form', text: 'Feature: F03' },
+      { name: 'team-x', text: 'Feature: none (harness change)' },
+    ]
+    expect(resolveChangeFeatures(proposals, features)).toEqual({
+      named: ['F03'],
+      problems: [],
+      notes: [],
+    })
+  })
+
+  it('reports a feature id that is not in features.json', () => {
+    expect(resolveChangeFeatures([{ name: 'x', text: 'Feature: F3' }], features).problems).toEqual(
+      [],
+    )
+    expect(resolveChangeFeatures([{ name: 'x', text: 'Feature: F09' }], features).problems).toEqual(
+      ['x names F09, which is not in features.json'],
+    )
+  })
+
+  it('notes a change without a proposal or without a Feature line', () => {
+    const proposals = [
+      { name: 'a', text: null },
+      { name: 'b', text: 'Risk tier: low' },
+      { name: 'c', text: 'Feature: F3' },
+    ]
+    expect(resolveChangeFeatures(proposals, features).notes).toEqual([
+      'a has no proposal.md',
+      'b has no "Feature:" line',
+      'c has a "Feature:" line that names no feature id (use F01 … or none)',
+    ])
   })
 })
 

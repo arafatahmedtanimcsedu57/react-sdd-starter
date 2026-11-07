@@ -7,7 +7,7 @@ import {
   changesTouched,
   findLedgerDrift,
   findOutOfScope,
-  proposalFeature,
+  resolveChangeFeatures,
   scopeForBranch,
 } from './lib.mjs'
 import { ALWAYS_IN_SCOPE, changedFiles, fail, me, path, readFeatures } from './io.mjs'
@@ -18,15 +18,22 @@ const drift = findLedgerDrift(list, ledger)
 if (drift.length) fail(`features.json was edited by hand:\n  ${drift.join('\n  ')}`)
 
 const files = changedFiles()
-const changeFeatures = changesTouched(files)
-  .map((name) => path(`openspec/changes/${name}/proposal.md`))
-  .filter((file) => existsSync(file))
-  .map((file) => proposalFeature(readFileSync(file, 'utf8')))
-  .filter(Boolean)
+const proposals = changesTouched(files).map((name) => {
+  const file = path(`openspec/changes/${name}/proposal.md`)
+  return { name, text: existsSync(file) ? readFileSync(file, 'utf8') : null }
+})
+const { named, problems, notes } = resolveChangeFeatures(proposals, features)
+if (problems.length) {
+  fail(
+    `${problems.join('\n✗ ')}\nFIX: correct the "Feature:" line in that proposal.md, or add the ` +
+      'feature first (npm run features -- add …).',
+  )
+}
 
-const target = scopeForBranch({ changeFeatures, features, me: me() })
+const target = scopeForBranch({ changeFeatures: named, features, me: me() })
 if (!target) {
-  console.log('scope: no feature for this branch (no change names one, none of yours active)')
+  const why = notes.length ? `; ${notes.join('; ')}` : ''
+  console.log(`scope: no feature for this branch (no change names one, none of yours active)${why}`)
   process.exit(0)
 }
 

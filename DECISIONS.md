@@ -5,6 +5,10 @@ re-decide it differently. Newest first. One entry per decision: what, why, what 
 rejected. Stack-level decisions live in `architecture.md`; this file is for choices made
 while building (a library approach, a trade-off, a workaround).
 
+**Append-only.** This file merges by union (`.gitattributes`), which keeps both sides when
+two branches add entries — but also when two branches edit the _same_ line, silently. So
+never edit an existing entry: supersede it with a new one ("Supersedes: 2026-10-05 …").
+
 Format:
 
 ```
@@ -32,7 +36,10 @@ Format:
   rewritten; a custom merge driver for `PROGRESS.md` — every clone must install it, and a
   missing one silently falls back to a conflicting merge; keeping global WIP=1.
 - Limit: two developers adding a feature at the same moment can still conflict in
-  `features.json` (both append to the array) — keep both. Owner checks trust
+  `features.json` (both append to the array) — keep both. Two branches both running `scope`/`owner` on one
+  feature: after keeping both in `features.json`, the owner re-runs the command for the
+  side the ledger lost, so a fresh line matches. `features check` also rejects ledger lines
+  the CLI wouldn't write (wrong `from`, no evidence, not the owner, a forked history). Owner checks trust
   `git config user.email`; PR review of the ledger is the real gate.
 - Unverified: whether GitHub's own merge button honours `merge=union`. If a PR shows a
   conflict in the ledger or `DECISIONS.md`, `git merge origin/master` locally (it does)

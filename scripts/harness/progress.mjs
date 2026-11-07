@@ -2,8 +2,8 @@
 // state. Run it at clock-in and clock-out. It no longer writes into PROGRESS.md: a generated
 // block there was rewritten by every developer's clock-out and always conflicted.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { renderProgress, summariseTasks } from './lib.mjs'
-import { path, readFeatures } from './io.mjs'
+import { findLedgerDrift, renderProgress, summariseTasks } from './lib.mjs'
+import { fail, path, readFeatures } from './io.mjs'
 
 const CHANGES = 'openspec/changes'
 
@@ -18,5 +18,8 @@ function openChanges() {
     }))
 }
 
-console.log(renderProgress({ features: readFeatures().features, changes: openChanges() }))
+const { list, ledger, features } = readFeatures()
+const drift = findLedgerDrift(list, ledger)
+if (drift.length) fail(`features.json and its ledger disagree:\n  ${drift.join('\n  ')}`)
+console.log(renderProgress({ features, changes: openChanges() }))
 console.log('\nThen read your section of PROGRESS.md, and DECISIONS.md.')

@@ -137,25 +137,80 @@ export function replayDefinitions(ledger) {
 
 const sameScope = (a, b) => [...a].sort().join('\n') === [...b].sort().join('\n')
 
+/**
+ * Lines the CLI would never have written: a move that doesn't start from the feature's
+ * replayed state (a hand-written line, or a history that forked on two branches and was
+ * union-merged), a move that isn't allowed, `passing` without evidence, or a move, scope
+ * change or hand-over by someone other than the owner. Lines from before owners existed
+ * carry no `by`; once one line has it, every later line must.
+ */
+export function findLedgerAnomalies(ledger) {
+  const problems = []
+  const state = {}
+  const owner = {}
+  let sawBy = false
+  ledger.forEach((e, i) => {
+    const where = `ledger line ${i + 1} (${e.id})`
+    if (e.by) sawBy = true
+    else if (sawBy) problems.push(`${where} has no "by" — written by hand?`)
+    const checked = Boolean(e.by)
+    const notOwner = (what) =>
+      checked && owner[e.id] && e.by !== owner[e.id]
+        ? [`${where}: ${what} by ${e.by}, not the owner ${owner[e.id]}`]
+        : []
+
+    if (e.event === 'owner') {
+      problems.push(...notOwner('owner changed'))
+      owner[e.id] = e.owner
+      return
+    }
+    if (!e.to) {
+      if (Array.isArray(e.scope)) problems.push(...notOwner('scope changed'))
+      return
+    }
+    const from = state[e.id] ?? null
+    if ((e.from ?? null) !== from) {
+      problems.push(
+        `${where}: moves from "${e.from}" but the feature was "${from}" (forked or hand-written history)`,
+      )
+    }
+    const allowed = from === null ? e.to === 'not_started' : ALLOWED[from]?.includes(e.to)
+    if (!allowed) problems.push(`${where}: ${from} → ${e.to} is not allowed`)
+    if (e.to === 'not_started') {
+      if (e.owner) owner[e.id] = e.owner
+    } else {
+      if (checked && e.to === 'passing' && !e.evidence) {
+        problems.push(`${where}: passing without evidence from a verify run`)
+      }
+      problems.push(...notOwner('moved'))
+    }
+    state[e.id] = e.to
+  })
+  return problems
+}
+
 /** Definitions in features.json that the ledger doesn't back up (edited by hand). */
 export function findLedgerDrift(list, ledger) {
   const defs = replayDefinitions(ledger)
   const known = new Set(ledger.filter((e) => e.to === 'not_started').map((e) => e.id))
-  return list.features.flatMap((f) => {
-    if (!known.has(f.id)) return [`${f.id} is not in the ledger (added by hand?)`]
-    const problems = []
-    const recorded = defs[f.id] ?? {}
-    if (recorded.scope && !sameScope(recorded.scope, f.scope)) {
-      problems.push(
-        `${f.id} scope is [${f.scope.join(', ')}] but the ledger says [${recorded.scope.join(', ')}]`,
-      )
-    }
-    if (recorded.owner && recorded.owner !== f.owner) {
-      problems.push(`${f.id} owner is ${f.owner} but the ledger says ${recorded.owner}`)
-    }
-    if (!recorded.owner) problems.push(`${f.id} has no owner in the ledger`)
-    return problems
-  })
+  return list.features
+    .flatMap((f) => {
+      if (!known.has(f.id)) return [`${f.id} is not in the ledger (added by hand?)`]
+      const problems = []
+      const recorded = defs[f.id] ?? {}
+      if (!recorded.scope) problems.push(`${f.id} has no scope in the ledger`)
+      else if (!sameScope(recorded.scope, f.scope)) {
+        problems.push(
+          `${f.id} scope is [${f.scope.join(', ')}] but the ledger says [${recorded.scope.join(', ')}]`,
+        )
+      }
+      if (recorded.owner && recorded.owner !== f.owner) {
+        problems.push(`${f.id} owner is ${f.owner} but the ledger says ${recorded.owner}`)
+      }
+      if (!recorded.owner) problems.push(`${f.id} has no owner in the ledger`)
+      return problems
+    })
+    .concat(findLedgerAnomalies(ledger))
 }
 
 const covers = (entry, file) => {
@@ -189,6 +244,32 @@ export function changesTouched(files) {
 /** The feature id a proposal names ("Feature: F03"), or null for "Feature: none". */
 export function proposalFeature(markdown) {
   return /^Feature:\s*(F\d{2,})\b/m.exec(markdown)?.[1] ?? null
+}
+
+/**
+ * The feature ids the touched changes' proposals name. A proposal that names an id not in
+ * features.json is a problem (the scope check must not silently fall back); a change
+ * without a proposal or a usable "Feature:" line is only noted ("Feature: none" is fine).
+ */
+export function resolveChangeFeatures(proposals, features) {
+  const ids = new Set(features.map((f) => f.id))
+  const named = []
+  const problems = []
+  const notes = []
+  for (const { name, text } of proposals) {
+    if (text == null) {
+      notes.push(`${name} has no proposal.md`)
+      continue
+    }
+    const id = proposalFeature(text)
+    if (id && ids.has(id)) named.push(id)
+    else if (id) problems.push(`${name} names ${id}, which is not in features.json`)
+    else if (!/^Feature:/m.test(text)) notes.push(`${name} has no "Feature:" line`)
+    else if (!/^Feature:\s*none\b/m.test(text)) {
+      notes.push(`${name} has a "Feature:" line that names no feature id (use F01 … or none)`)
+    }
+  }
+  return { named: [...new Set(named)], problems, notes }
 }
 
 /**

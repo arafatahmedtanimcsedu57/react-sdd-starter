@@ -129,9 +129,17 @@ function print(features) {
   }
 }
 
+// Widening a scope or handing a feature over is the owner's call (after asking a human);
+// otherwise anyone could take a feature and then move it.
 function setDefinition(state, featureId, change, ledgerLine) {
-  if (!state.list.features.some((f) => f.id === featureId))
-    fail(`${featureId} is not in features.json.`)
+  const current = state.list.features.find((f) => f.id === featureId)
+  if (!current) fail(`${featureId} is not in features.json.`)
+  if (current.owner !== caller()) {
+    fail(
+      `${featureId} belongs to ${current.owner}; only its owner changes its scope or owner. ` +
+        'Ask them to run it.',
+    )
+  }
   let next
   try {
     next = parseFeatureList({
@@ -242,6 +250,6 @@ switch (command) {
     break
   default:
     fail(
-      `Unknown command "${command}". Commands: list, add, start, block, verify, scope, owner, check.`,
+      `Unknown command "${command}". Commands: list, add, start, block, verify, scope, owner, check, migrate (one-time).`,
     )
 }

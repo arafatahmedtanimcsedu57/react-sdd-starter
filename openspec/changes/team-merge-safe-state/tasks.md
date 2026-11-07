@@ -30,6 +30,6 @@ Estimated reviewable lines: ~280
 - [x] 4.1 `CLAUDE.md` → Feature list + Sessions: owners, WIP per owner, progress per owner
 - [x] 4.2 `PIPELINE.md`, `README.md` rows for `features.json` / `PROGRESS.md`
 - [x] 4.3 `DECISIONS.md` entry
-- [ ] 4.4 `npm run check` green; react-reviewer PASS
+- [x] 4.4 `npm run check` green; react-reviewer PASS
 
 approved: arafatahmedtanimcsedu57, 2026-11-08
