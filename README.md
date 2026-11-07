@@ -92,7 +92,9 @@ You can also just describe what you want in plain words; Claude follows the same
 Each developer owns features (`npm run features` shows the owner) and runs one
 orchestrator window: `/orchestrate F03`. It splits the feature into tasks, starts one
 worker per task in its own git worktree (up to 4, `.claude/orchestra.json`), and shows a
-board (`npm run board`) with every task by name. You answer only there: approve each
+board (`npm run board`) with every task by name. Setting up a teammate, who approves
+what, and the branch rules that make review mandatory: [`TEAM.md`](TEAM.md)
+(`npm run team:check` verifies them). You answer only there: approve each
 task's `tasks.md` (Gate 1), answer questions. Each task becomes one PR, reviewed by your
 teammate. Close the window any time — `/orchestrate` resumes from the board.
 
@@ -205,6 +207,7 @@ same checks.
 | `npm run features`      | Feature list: `add`, `start`, `block`, `verify`, `check`      |
 | `npm run progress`      | Print features by owner and open changes (clock in/out)       |
 | `npm run board`         | The orchestrator's board: tasks, workers, what needs you      |
+| `npm run team:check`    | Is review by the other developer enforced on GitHub? (`gh`)   |
 | `npm run scope`         | Changes outside the active feature's scope                    |
 | `npm run harness:check` | Feature list matches its ledger; `CLAUDE.md` stays short      |
 

@@ -240,7 +240,8 @@ plans a feature into tasks (one OpenSpec change each), starts a `task-worker` pe
 its own git worktree (Claude Code cuts it from `master`), and keeps a local board
 (`npm run board`). Per task: worker drafts the spec → **Gate 1** by the owner in the
 orchestrator → worker builds and checks → orchestrator runs `react-reviewer`, pushes and
-opens the PR → the **other** developer reviews (Gate 2). Only a feature's first task writes
+opens the PR → the **other** developer reviews (Gate 2 — enforced by branch protection that
+requires a code-owner approval on the latest push; `npm run team:check`, `TEAM.md`). Only a feature's first task writes
 `features add/start`, only a closing PR writes `verify`, so two branches never move the same
 feature. Hooks check each worker inside its worktree; state merges by union. Design:
 `openspec/changes/team-orchestrator/design.md`.

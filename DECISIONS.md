@@ -20,6 +20,22 @@ Format:
 
 ---
 
+## 2026-11-08: Gate 2 is enforced by branch protection, verified by `npm run team:check`
+
+- Why: GitHub never lets a PR's author approve it, so "reviewed by the other developer"
+  only needs protection that requires an approving code-owner review on the latest push.
+  `team:check` reads the protection, collaborators and CODEOWNERS (read-only `gh`) and
+  names every missing rule with its fix; `/orchestrate` runs it at clock-in.
+- Found: this repo's `master` had **no** protection and no rulesets (team:check: 9 of 10
+  rules missing). Earlier PRs called branch protection "the backstop" for local guard
+  gaps — it wasn't there. `TEAM.md` §6 has the one admin command; apply it only after the
+  teammate is a collaborator and in CODEOWNERS, or nobody can approve the only owner's PRs.
+- Also: the PR size check now excludes `*.test.mjs`, as CLAUDE.md always said for tests.
+- Rejected: a CI job requiring a non-author approval — duplicates GitHub and can't block
+  a merge itself; applying protection from the harness — an admin decision, and
+  `guard-bash.sh` blocks protection writes on purpose; `team:check` in `npm run check` — CI
+  tokens can't read protection.
+
 ## 2026-11-08: The orchestrator reviews, pushes and opens PRs; workers only build and commit
 
 - Why: `/orchestrate` runs one `task-worker` per task in its own worktree. A subagent can't

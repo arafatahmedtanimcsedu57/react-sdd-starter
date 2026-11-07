@@ -532,3 +532,102 @@ export function renderBoard(board, { maxWorkers, featureTitles = {} }) {
   })
   return out.join('\n')
 }
+
+// ── Team setup (Gate 2 enforcement) ───────────────────────────────────────────────────────
+// GitHub never lets a PR's author approve it, so "reviewed by the other developer" holds
+// once the default branch REQUIRES an approving code-owner review on the latest push.
+// checkTeamSetup says whether it does; team.mjs gathers the facts with read-only gh calls.
+
+export const REQUIRED_CHECKS = ['approvals', 'node-22', 'quality', 'size']
+export const CODEOWNER_PLACEHOLDER = '@teammate-github-username'
+
+/**
+ * CODEOWNERS rules, one per line: `{ pattern, owners }`. Owners are `@user`, `@org/team` or
+ * an email. GitHub uses only the LAST matching line for a file, so each line must stand on
+ * its own.
+ */
+export function parseCodeowners(text) {
+  return String(text)
+    .split('\n')
+    .map((line) => line.replace(/#.*/, '').trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [pattern, ...rest] = line.split(/\s+/)
+      return { pattern, owners: rest.filter((o) => o.includes('@')) }
+    })
+}
+
+/** Every rule the harness relies on, each `{ rule, ok, fix }`. */
+export function checkTeamSetup({ branch, protection, collaborators, codeowners }) {
+  const p = protection ?? {}
+  const reviews = p.required_pull_request_reviews ?? {}
+  const checks = new Set([
+    ...(p.required_status_checks?.contexts ?? []),
+    ...(p.required_status_checks?.checks ?? []).map((c) => c.context),
+  ])
+  const missingChecks = REQUIRED_CHECKS.filter((c) => !checks.has(c))
+  // A team or an email counts as one owner; a line needs two, or its author has no reviewer.
+  const thin = codeowners.filter(
+    (l) => l.owners.filter((o) => o !== CODEOWNER_PLACEHOLDER).length < 2,
+  )
+  const writers = new Set(collaborators.map((c) => c.toLowerCase()))
+  const users = [...new Set(codeowners.flatMap((l) => l.owners).filter((o) => /^@[^/]+$/.test(o)))]
+  const strangers = users.filter((o) => !writers.has(o.slice(1).toLowerCase()))
+  const setting = (what) => `in Settings → Branches → ${branch}: ${what}`
+  return [
+    {
+      rule: `${branch} is protected`,
+      ok: Boolean(protection),
+      fix: `add a branch protection rule for ${branch} (TEAM.md → Branch protection has one command)`,
+    },
+    {
+      rule: 'required status checks: approvals, node-22, quality, size',
+      ok: Boolean(protection) && missingChecks.length === 0,
+      fix: setting(
+        `require status checks ${missingChecks.join(', ') || REQUIRED_CHECKS.join(', ')}`,
+      ),
+    },
+    {
+      rule: 'at least 1 approving review',
+      ok: (reviews.required_approving_review_count ?? 0) >= 1,
+      fix: setting('require a pull request with 1 approval'),
+    },
+    {
+      rule: 'review from a code owner',
+      ok: Boolean(reviews.require_code_owner_reviews),
+      fix: setting('require review from Code Owners'),
+    },
+    {
+      rule: 'new pushes dismiss approvals',
+      ok: Boolean(reviews.dismiss_stale_reviews),
+      fix: setting('dismiss stale pull request approvals when new commits are pushed'),
+    },
+    {
+      rule: 'the last push needs approval from someone else',
+      ok: Boolean(reviews.require_last_push_approval),
+      fix: setting('require approval of the most recent reviewable push'),
+    },
+    {
+      rule: 'admins follow the rules too',
+      ok: Boolean(p.enforce_admins?.enabled),
+      fix: setting('do not allow bypassing the above settings (include administrators)'),
+    },
+    {
+      rule: 'no force pushes or deletion',
+      ok: Boolean(protection) && !p.allow_force_pushes?.enabled && !p.allow_deletions?.enabled,
+      fix: setting('leave "allow force pushes" and "allow deletions" off'),
+    },
+    {
+      rule: `every CODEOWNERS line on ${branch} names two or more owners`,
+      ok: codeowners.length > 0 && thin.length === 0,
+      fix: codeowners.length
+        ? `give these lines a second owner on ${branch}: ${thin.map((l) => l.pattern).join(', ')}`
+        : `add .github/CODEOWNERS with both developers to ${branch} (merge it before protection)`,
+    },
+    {
+      rule: 'every code owner can push (a collaborator with write access)',
+      ok: strangers.length === 0,
+      fix: `add ${strangers.join(', ')} in Settings → Collaborators with write access`,
+    },
+  ]
+}

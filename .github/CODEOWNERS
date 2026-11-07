@@ -1,5 +1,7 @@
-# Who gets asked to review what. Replace @arafatahmedtanimcsedu57 with real people/teams.
-# With branch protection "Require review from Code Owners", these reviews are mandatory.
+# Who gets asked to review what. Both developers own everything, so each PR is reviewed by
+# the one who didn't write it (GitHub never lets an author approve their own PR). With
+# "Require review from Code Owners" these reviews are mandatory — `npm run team:check`.
+# TODO: replace with your teammate's GitHub username (TEAM.md).
 
 *                                   @arafatahmedtanimcsedu57
 
