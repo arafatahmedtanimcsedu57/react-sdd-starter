@@ -27,15 +27,15 @@ them, don't work around them.
 
 ## Slash commands (the human's only interface)
 
-The human uses exactly six: `/start` (once: set up the project + its Claude Design),
+The human uses exactly seven: `/start` (once: set up the project + its Claude Design),
 `/feature <idea>` (design + spec, then stop so they can edit the design), `/build
 <change-name>` (Gate 1 → code → PR), `/sync-ui [feature]` (code catches up with design
 edits), `/finish <change-name>` (after merge: archive the spec), `/fix <bug>` (a bug in
-shipped behaviour: failing test → fix → PR, no design or spec step). Every other skill
-(`feature-pipeline`, `openspec-*`) is internal — you invoke it; never tell the human to run
-it. When a vendored OpenSpec skill says "run `/opsx:propose`", say `/feature`; for
-`/opsx:apply`, say `/build <change-name>`; for `/opsx:archive` or `/opsx:sync`, say
-`/finish <change-name>`.
+shipped behaviour: failing test → fix → PR, no design or spec step), `/orchestrate
+[feature]` (team work: one worker per task in its own worktree, a board, every approval in
+one window). Every other skill and agent (`feature-pipeline`, `openspec-*`, `task-worker`)
+is internal — never tell the human to run it. Vendored OpenSpec skills name `/opsx:*`
+commands; translate them per `.claude/rules/commands.md`.
 
 ## Sessions (clock in / clock out)
 

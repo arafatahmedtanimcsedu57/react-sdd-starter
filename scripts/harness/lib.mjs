@@ -339,3 +339,196 @@ export function checkInstructions(text, { maxLines, exists }) {
   }
   return problems
 }
+
+// ── Orchestrator board ──────────────────────────────────────────────────────────────────
+// One row per task (= one OpenSpec change = one worker = one PR). The orchestrator is the
+// only writer (`npm run board`); workers report through the STATUS line of each stop.
+
+export const TASK_STATUSES = [
+  'planned',
+  'queued',
+  'drafting',
+  'needs-you',
+  'coding',
+  'checking',
+  'ready',
+  'pr-open',
+  'merged',
+  'finished',
+  'blocked',
+]
+// A worker is alive while RUNNING (counts toward maxWorkers). A task keeps its folders until
+// merged — `ready` (built, waiting for the orchestrator's review + PR) and `pr-open` too —
+// so a new task never edits the same files and conflicts at merge.
+const RUNNING = ['drafting', 'needs-you', 'coding', 'checking']
+// `blocked` too: a worker may have stopped half-way through editing them.
+const HOLDS_FOLDERS = [...RUNNING, 'ready', 'pr-open', 'blocked']
+const DONE = ['merged', 'finished']
+const WORKER_STATUSES = ['drafting', 'needs-you', 'coding', 'checking', 'ready', 'blocked']
+
+const taskSchema = z.object({
+  id: z
+    .string()
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'task id must be kebab-case (it is the change name)'),
+  title: z.string().min(1),
+  feature: z.string().regex(/^F\d{2,}$/, 'feature must look like F03'),
+  folders: z.array(z.string().min(1)).min(1, 'a task needs at least one folder'),
+  dependsOn: z.array(z.string()).default([]),
+  // Provides only a contract (Zod schema + MSW mock): dependants may start once its PR is open.
+  contract: z.boolean().default(false),
+  // The feature's first task is the only one that writes `features add/start` to the ledger.
+  first: z.boolean().default(false),
+  status: z.enum(TASK_STATUSES).default('planned'),
+  need: z.string().optional(),
+  note: z.string().optional(),
+  worker: z.string().optional(),
+  worktree: z.string().optional(),
+  branch: z.string().optional(),
+  pr: z.number().int().positive().optional(),
+  updatedAt: z.string().optional(),
+})
+
+export function parseBoard(data) {
+  const result = z.object({ tasks: z.array(taskSchema) }).safeParse(data)
+  if (!result.success) {
+    const issues = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`)
+    throw new Error(`board is invalid:\n  ${issues.join('\n  ')}`)
+  }
+  const { tasks } = result.data
+  const ids = new Set()
+  for (const t of tasks) {
+    if (ids.has(t.id)) throw new Error(`board has a duplicate task: ${t.id}`)
+    ids.add(t.id)
+  }
+  for (const t of tasks) {
+    const unknown = t.dependsOn.filter((d) => !ids.has(d))
+    if (unknown.length) throw new Error(`${t.id} depends on unknown task(s): ${unknown.join(', ')}`)
+  }
+  const firsts = tasks.filter((t) => t.first)
+  const twice = firsts.find((f, i) => firsts.findIndex((x) => x.feature === f.feature) !== i)
+  if (twice) throw new Error(`${twice.feature} has more than one first task; only one may start it`)
+  // The first task adds/starts the feature; until it exists on the branch a worker starts
+  // from, that worker's scope check fails. So every other task builds on it.
+  for (const first of firsts) {
+    const loose = tasks.filter(
+      (t) => t.feature === first.feature && t.id !== first.id && !t.dependsOn.includes(first.id),
+    )
+    if (loose.length) {
+      throw new Error(
+        `${loose.map((t) => t.id).join(', ')} must depend on ${first.id}, the first task of ${first.feature}`,
+      )
+    }
+  }
+  return result.data
+}
+
+const configSchema = z.object({ maxWorkers: z.number().int().min(1).max(8).default(4) })
+
+/** `.claude/orchestra.json`, validated. */
+export function parseOrchestraConfig(data) {
+  const result = configSchema.safeParse(data ?? {})
+  if (!result.success) {
+    const issues = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`)
+    throw new Error(`.claude/orchestra.json is invalid:\n  ${issues.join('\n  ')}`)
+  }
+  return result.data
+}
+
+/**
+ * Files a worker's branch changed outside its task: its folders, its own OpenSpec change
+ * and — for the feature's first task only — the feature list. The hooks check the wider
+ * feature scope; this is checked by the orchestrator before it reviews and pushes.
+ */
+export function taskOutOfScope(files, task) {
+  const own = [`openspec/changes/${task.id}/`]
+  if (task.first) own.push('features.md', 'features.json', 'features.ledger.jsonl')
+  return findOutOfScope(files, task.folders, own)
+}
+
+/** `STATUS: <status> | <need or -> | <note>` — the last such line in a worker's stop. */
+export function parseStatus(text) {
+  // Tolerates the line wrapped in backticks or bold, as a model may echo the template.
+  const lines = [
+    ...String(text).matchAll(
+      /^[\s`*]*STATUS:[*`]*\s*([\w-]+)\s*\|\s*([^|\n]*?)\s*\|\s*(.*?)[\s`*]*$/gm,
+    ),
+  ]
+  const last = lines.at(-1)
+  if (!last || !WORKER_STATUSES.includes(last[1])) return null
+  const need = last[2] && last[2] !== '-' ? last[2] : undefined
+  return { status: last[1], ...(need ? { need } : {}), note: last[3].trim() }
+}
+
+const overlaps = (a, b) => covers(a, b) || covers(b, a)
+
+/** Why a planned/queued task can't start yet, or null when it can. */
+export function whyWaiting(task, tasks, { maxWorkers }) {
+  const byId = new Map(tasks.map((t) => [t.id, t]))
+  const waitingOn = task.dependsOn.filter((d) => {
+    const dep = byId.get(d)
+    return !(DONE.includes(dep.status) || (dep.contract && dep.status === 'pr-open'))
+  })
+  if (waitingOn.length) {
+    return `waits for: ${waitingOn.map((d) => byId.get(d).title).join(', ')}`
+  }
+  const others = tasks.filter((t) => t.id !== task.id)
+  for (const other of others.filter((t) => HOLDS_FOLDERS.includes(t.status))) {
+    const shared = task.folders.find((f) => other.folders.some((o) => overlaps(f, o)))
+    if (shared) return `shares ${shared} with ${other.title}`
+  }
+  const running = others.filter((t) => RUNNING.includes(t.status)).length
+  if (running >= maxWorkers) return `worker cap (${maxWorkers}) reached`
+  return null
+}
+
+/** Ids of tasks that may start now, in board order, without exceeding the cap or overlapping. */
+export function runnableTasks(board, config) {
+  const tasks = board.tasks.map((t) => ({ ...t }))
+  const picked = []
+  for (const task of tasks) {
+    if (!['planned', 'queued'].includes(task.status)) continue
+    if (whyWaiting(task, tasks, config)) continue
+    picked.push(task.id)
+    task.status = 'drafting' // counts as running for the next pick
+  }
+  return picked
+}
+
+const ICON = {
+  planned: '◷',
+  queued: '◷',
+  drafting: '●',
+  coding: '●',
+  checking: '●',
+  ready: '◆',
+  'needs-you': '?',
+  'pr-open': '↑',
+  merged: '✓',
+  finished: '✓',
+  blocked: '✗',
+}
+
+/** The board as the owner reads it: tasks by feature, readable names, then "Needs you". */
+export function renderBoard(board, { maxWorkers, featureTitles = {} }) {
+  const { tasks } = board
+  const running = tasks.filter((t) => RUNNING.includes(t.status)).length
+  const out = [`Board — workers ${running}/${maxWorkers}`]
+  for (const feature of [...new Set(tasks.map((t) => t.feature))]) {
+    out.push('', `${featureTitles[feature] ?? feature} (${feature})`)
+    for (const t of tasks.filter((x) => x.feature === feature)) {
+      const waiting = ['planned', 'queued'].includes(t.status)
+        ? whyWaiting(t, tasks, { maxWorkers })
+        : null
+      const status = t.status === 'needs-you' ? 'NEEDS YOU' : t.status
+      const detail = [t.pr ? `PR #${t.pr}` : null, waiting ?? t.note].filter(Boolean).join(' — ')
+      out.push(`  ${ICON[t.status]} ${`${t.title} `.padEnd(28, '.')} ${status.padEnd(9)} ${detail}`)
+    }
+  }
+  const needs = tasks.filter((t) => t.status === 'needs-you')
+  out.push('', needs.length ? 'Needs you' : 'Needs you — nothing')
+  needs.forEach((t, i) => {
+    const what = t.need === 'gate1' ? 'approve tasks.md?' : (t.need ?? 'answer')
+    out.push(`  ${i + 1}. ${t.title} — ${what} ${t.note ?? ''}`.trimEnd())
+  })
+  return out.join('\n')
+}

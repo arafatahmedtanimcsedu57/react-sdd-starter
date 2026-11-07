@@ -233,6 +233,20 @@ A realistic week for one reviewer: ~5 min per Gate 1 brief, ~10–20 min per Gat
 
 ---
 
+## Team mode — `/orchestrate`
+
+Two developers, each owning features, each in one **orchestrator** window. The orchestrator
+plans a feature into tasks (one OpenSpec change each), starts a `task-worker` per task in
+its own git worktree (Claude Code cuts it from `master`), and keeps a local board
+(`npm run board`). Per task: worker drafts the spec → **Gate 1** by the owner in the
+orchestrator → worker builds and checks → orchestrator runs `react-reviewer`, pushes and
+opens the PR → the **other** developer reviews (Gate 2). Only a feature's first task writes
+`features add/start`, only a closing PR writes `verify`, so two branches never move the same
+feature. Hooks check each worker inside its worktree; state merges by union. Design:
+`openspec/changes/team-orchestrator/design.md`.
+
+---
+
 ## Guardrails
 
 - **Branch protection is non-negotiable.** Require the CI check + 1 review on `main`.

@@ -20,6 +20,25 @@ Format:
 
 ---
 
+## 2026-11-08: The orchestrator reviews, pushes and opens PRs; workers only build and commit
+
+- Why: `/orchestrate` runs one `task-worker` per task in its own worktree. A subagent can't
+  start another subagent (no `react-reviewer` from a worker), and a background agent can't
+  answer permission prompts (`git push`, `gh pr create` are "ask"). So a worker stops at
+  `ready`; the orchestrator, in the owner's window, reviews, pushes and opens the PR. The
+  orchestrator also writes every `approved:` line, only on the owner's words.
+- Board: local `.claude/orchestra/board.json`, one writer (`npm run board`), rebuilt from
+  workers' `STATUS:` lines. `ready` / `pr-open` tasks keep their folders until merged, so
+  no new task edits the same files. Only a feature's first task writes `features
+add/start`; a closing PR writes `verify` — two branches never move one feature.
+- Dry run: a worker drafted a contract task in its worktree, stopped at Gate 1 with a valid
+  STATUS line, touched no ledger file; the board showed it under "Needs you". It also
+  showed that task folders must be folders including tests and shared registration files
+  (`src/mocks/handlers.ts`, …) — now in the planning step.
+- Rejected: workers pushing / opening PRs themselves (permission prompts nobody sees);
+  workers writing the board (parallel writers to one file); every task running
+  `features start` (forked ledger history).
+
 ## 2026-11-08: Feature state lives only in the ledger, which merges by union; features have owners
 
 - Why: with two developers every `start` / `verify` edited `features.json` and every PR

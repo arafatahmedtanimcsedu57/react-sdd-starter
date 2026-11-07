@@ -25,25 +25,24 @@ Things that affect everyone. Add, don't rewrite.
 
 ### Current work
 
-- `chore/team-merge-safe-state` (slice 2 of `team-orchestration`, Gate 1 approved): owners,
-  state only in the ledger, union merge for the ledger + `DECISIONS.md`, WIP per owner,
-  scope per branch, this per-owner `PROGRESS.md`. Done; react-reviewer PASS; PR #31 open
-  (over the size limit — human chose one PR + `large-pr-approved`).
-- Slice 1 confirmed on `master`: a live worker got "Typecheck failed" and the scope error
-  inside its own worktree.
+- `chore/team-orchestrator` (slice 3 of `team-orchestration`, Gate 1 approved):
+  `/orchestrate`, `task-worker` agent, `npm run board`, push guard for `@{push}` / `-C`.
+  Dry run: a worker drafted a change in its worktree and stopped at Gate 1; the board
+  showed it. react-reviewer FAIL → fixed → PASS. PR open; over the size limit.
+- Next slice: 4 `team-cross-review` (CI approver ≠ author, CODEOWNERS, `TEAM.md`).
 - Harness gaps 3 + 4 (enforced clock-out + junk check; trace of hook/verify runs) still open;
   `.claude/traces/` is untracked and was left alone.
 
 ### Known issues
 
-- Open (reviewer question): a worker branch tracking `origin/master` with
-  `push.default=upstream` could make a bare `git push` target master; `guard-bash.sh` only
-  checks the current branch name. Branch protection is the backstop. Decide in slice 3.
-
 - `.github/workflows/pr-size.yml` excludes `*.test.ts(x)` but not `*.test.mjs`, so harness
   tests count toward the 400-line limit. Fix is a one-line CI change; needs a human OK.
+- `guard-bash.sh` still can't see a bare `git push` after `cd <other checkout> &&` (it
+  reads the command's `cwd`, not a `cd` inside it). Branch protection is the backstop;
+  the orchestrator always pushes with `git -C <worktree> push -u origin <branch>`.
+- Not yet run for real: a full feature through `/orchestrate` (only the Gate 1 dry run).
 
 ### Next step
 
-- Human: review PR #31, add `large-pr-approved`, merge. Then slice 3 `team-orchestrator`
-  on its own branch.
+- Human: review the slice-3 PR, add `large-pr-approved`, merge. Then slice 4
+  `team-cross-review` on its own branch — or first try `/orchestrate` on a real feature.

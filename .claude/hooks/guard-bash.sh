@@ -10,7 +10,8 @@ cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
 [ -z "$cmd" ] && exit 0
 . "$(dirname "$0")/lib.sh"
 # Read the branch of the checkout the command runs in (a worker's worktree, not main).
-cd "$(repo_root "$(printf '%s' "$input" | jq -r '.cwd // empty')")" 2>/dev/null || true
+cmd_cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
+cd "$(repo_root "$cmd_cwd")" 2>/dev/null || true
 
 block() {
   printf 'Blocked: %s. Push a feature branch and open a PR; a human merges it (CLAUDE.md → Gates).\n' "$1" >&2
@@ -44,8 +45,20 @@ while IFS= read -r part; do
   part=$(printf '%s' "$part" | sed -E '
     s/^[[:space:](]+//
     s/^([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)+//
-    s/^((sudo|command|exec|time|env|nohup)[[:space:]]+)+//
-    s/^git([[:space:]]+-[Cc][[:space:]]+[^[:space:]]+)+/git/')
+    s/^((sudo|command|exec|time|env|nohup)[[:space:]]+)+//')
+  # `git -C <dir> push` acts on <dir>'s checkout (how the orchestrator pushes a worker's
+  # worktree): keep each -C to read that checkout's branch and push target, drop -c k=v.
+  in_dir=()
+  unknown_dir=0
+  [[ -n $cmd_cwd ]] && in_dir=(-C "$cmd_cwd")
+  while [[ $part =~ ^git[[:space:]]+-([Cc])[[:space:]]+([^[:space:]]+)[[:space:]]*(.*)$ ]]; do
+    flag=${BASH_REMATCH[1]} dir=${BASH_REMATCH[2]} part="git ${BASH_REMATCH[3]}"
+    if [[ $flag == C ]]; then
+      # Quoted paths were blanked above, so that checkout can't be known.
+      [[ $dir == '""' || $dir == "''" ]] && unknown_dir=1
+      in_dir+=(-C "$dir")
+    fi
+  done
 
   [[ $part =~ ^gh[[:space:]]+pr[[:space:]]+merge ]] && block "merging a PR"
   if [[ $part =~ ^gh[[:space:]]+api ]]; then
@@ -56,18 +69,30 @@ while IFS= read -r part; do
   [[ $part =~ ^git[[:space:]]+push([[:space:]]|$) ]] || continue
   read -ra args <<<"${part#*push}"
   positional=()
+  branch_push=1
   for a in "${args[@]}"; do
     [[ $a =~ $re_force ]] && block "force-pushing ($a)"
+    [[ $a =~ ^(--tags|--delete|-d|--all)$ ]] && branch_push=0
     [[ $a == -* ]] && continue
     positional+=("$a")
     dest=${a##*:} # `src:dst` → dst; a bare name pushes to itself
     [[ $dest =~ $re_default ]] && block "pushing to $dest"
   done
+  # A bare push goes wherever push.default + upstream send it. A worker branch cut from master
+  # may track origin/master, and with push.default=upstream that push lands on master.
+  if ((unknown_dir && ${#positional[@]} < 2 && branch_push)); then
+    block "a bare push with a quoted git -C path (name the branch: git -C <dir> push -u origin <branch>)"
+  fi
+  here=$(git "${in_dir[@]}" rev-parse --abbrev-ref HEAD 2>/dev/null || printf '%s' "$current")
+  if ((${#positional[@]} < 2 && branch_push)); then
+    target=$(git "${in_dir[@]}" rev-parse --abbrev-ref '@{push}' 2>/dev/null || true)
+    [[ -n $target && ${target#*/} =~ $re_default ]] && block "pushing to $target (this branch's push target)"
+  fi
   # From main/master, a push with no branch named (or naming HEAD) targets main/master.
-  if [[ $current =~ $re_default ]]; then
-    ((${#positional[@]} < 2)) && block "pushing from $current with no target branch"
+  if [[ $here =~ $re_default ]]; then
+    ((${#positional[@]} < 2)) && block "pushing from $here with no target branch"
     for a in "${positional[@]:1}"; do
-      [[ ${a%%:*} == HEAD && $a != *:* ]] && block "pushing HEAD while on $current"
+      [[ ${a%%:*} == HEAD && $a != *:* ]] && block "pushing HEAD while on $here"
     done
   fi
 done < <(printf '%s\n' "$cmd" | sed -E 's/(&&|\|\||;|\||\$\(|`|\{)/\n/g')

@@ -87,6 +87,15 @@ You can also just describe what you want in plain words; Claude follows the same
 - **One change = one small PR** (≤ 400 reviewable lines, checked in CI). Split big
   features into several `/feature` changes.
 
+### Working as a team: `/orchestrate`
+
+Each developer owns features (`npm run features` shows the owner) and runs one
+orchestrator window: `/orchestrate F03`. It splits the feature into tasks, starts one
+worker per task in its own git worktree (up to 4, `.claude/orchestra.json`), and shows a
+board (`npm run board`) with every task by name. You answer only there: approve each
+task's `tasks.md` (Gate 1), answer questions. Each task becomes one PR, reviewed by your
+teammate. Close the window any time — `/orchestrate` resumes from the board.
+
 ## 4. Where things go
 
 Claude follows these rules automatically (they're in `CLAUDE.md`). They're here so you can
@@ -195,6 +204,7 @@ same checks.
 | `npm run gen:api`       | Generate the API layer from an OpenAPI spec                   |
 | `npm run features`      | Feature list: `add`, `start`, `block`, `verify`, `check`      |
 | `npm run progress`      | Print features by owner and open changes (clock in/out)       |
+| `npm run board`         | The orchestrator's board: tasks, workers, what needs you      |
 | `npm run scope`         | Changes outside the active feature's scope                    |
 | `npm run harness:check` | Feature list matches its ledger; `CLAUDE.md` stays short      |
 
