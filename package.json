@@ -25,6 +25,8 @@
     "features": "node scripts/harness/features.mjs",
     "board": "node scripts/harness/board.mjs",
     "team:check": "node scripts/harness/team.mjs",
+    "clock-out": "node scripts/harness/clock-out.mjs",
+    "trace": "node scripts/harness/trace.mjs",
     "progress": "node scripts/harness/progress.mjs",
     "scope": "node scripts/harness/scope.mjs",
     "ready": "node scripts/harness/ready.mjs",

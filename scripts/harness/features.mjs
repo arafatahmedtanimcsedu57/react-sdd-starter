@@ -15,7 +15,7 @@ import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { addFeature, findLedgerDrift, parseFeatureList, transition } from './lib.mjs'
-import { appendLedger, fail, git, me, path, readFeatures, writeList } from './io.mjs'
+import { appendLedger, appendTrace, fail, git, me, path, readFeatures, writeList } from './io.mjs'
 
 const MAX_ATTEMPTS = 3
 
@@ -68,9 +68,18 @@ function move(state, featureId, to, opts = {}) {
   appendLedger(line)
 }
 
-function run(cmd) {
+function run(cmd, featureId) {
   console.log(`\n$ ${cmd}`)
-  return spawnSync(cmd, { shell: true, stdio: 'inherit' }).status === 0
+  const started = Date.now()
+  const exit = spawnSync(cmd, { shell: true, stdio: 'inherit' }).status ?? 1
+  appendTrace({
+    source: 'features',
+    step: `verify ${featureId}`,
+    exit,
+    ms: Date.now() - started,
+    detail: cmd,
+  })
+  return exit === 0
 }
 
 function verify(state, featureId) {
@@ -82,7 +91,7 @@ function verify(state, featureId) {
   if (feature.owner !== caller()) {
     fail(`${featureId} belongs to ${feature.owner}; only its owner verifies it.`)
   }
-  if (run('npm run check') && run(feature.verify)) {
+  if (run('npm run check', featureId) && run(feature.verify, featureId)) {
     const dirty = git('status', '--porcelain') ? '+uncommitted' : ''
     const evidence = {
       commit: `${git('rev-parse', '--short', 'HEAD')}${dirty}`,
