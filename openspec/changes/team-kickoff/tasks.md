@@ -8,7 +8,7 @@ check and review. Approving this file approves both.
 - [x] A.3 `ownSection` accepts `## @login`; clock-out uses it + tests
 - [x] A.4 `scripts/harness/roster.mjs` (`npm run team`): list, `add`, `join`, `codeowners`; `team:check` stays `team.mjs`
 - [x] A.5 `team.json` with the current owner; CLI test for add / join / codeowners (`scripts/harness/team.cli.test.mjs`)
-- [ ] A.6 `npm run check` green; react-reviewer PASS; PR A
+- [x] A.6 `npm run check` green; react-reviewer PASS; PR A
 
 ## B. /kickoff
 
@@ -16,6 +16,6 @@ check and review. Approving this file approves both.
 - [x] B.2 `.claude/commands/orchestrate.md`: owner may be `@login`; points new teammates to `npm run team -- join`
 - [x] B.3 `CLAUDE.md` (eight commands; one-liners → `.claude/rules/commands.md`), `TEAM.md`, `README.md`, `DECISIONS.md`
 - [x] B.4 Dry run on a throwaway branch: a short sample PRD → draft features + split shown, nothing written until approved; then clean up
-- [ ] B.5 `npm run check` green; react-reviewer PASS; PR B
+- [x] B.5 `npm run check` green; react-reviewer PASS; PR B
 
 approved: arafatahmedtanimcsedu57, 2026-11-08
