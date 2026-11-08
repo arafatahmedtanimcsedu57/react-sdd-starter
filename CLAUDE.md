@@ -17,8 +17,9 @@ Authoritative rules for this repo. Claude reads this every session — follow it
 - Dev: `npm run dev` · Build: `npm run build` · Format: `npm run format`
 - Typecheck: `npm run typecheck` · Lint: `npm run lint` · Doctor: `npm run doctor`
 - Test: `npm run test` · Coverage: `npm run test:coverage` · E2E: `npm run test:e2e`
-- Harness: `npm run ready` · `npm run features` · `npm run progress` · `npm run scope` ·
-  `npm run harness:check` · `npm run clock-out` · `npm run trace` (what the hooks ran)
+- Harness: `npm run ready` · `npm run features` · `npm run team` (roster) · `npm run
+progress` · `npm run scope` · `npm run harness:check` · `npm run clock-out` · `npm run
+trace` (what the hooks ran)
 - All gates (definition of done): `npm run check`
 
 Hooks already run prettier + eslint + typecheck after every edit, and the scope check,
@@ -27,23 +28,19 @@ them, don't work around them.
 
 ## Slash commands (the human's only interface)
 
-The human uses exactly seven: `/start` (once: set up the project + its Claude Design),
-`/feature <idea>` (design + spec, then stop so they can edit the design), `/build
-<change-name>` (Gate 1 → code → PR), `/sync-ui [feature]` (code catches up with design
-edits), `/finish <change-name>` (after merge: archive the spec), `/fix <bug>` (a bug in
-shipped behaviour: failing test → fix → PR, no design or spec step), `/orchestrate
-[feature]` (team work: one worker per task in its own worktree, a board, every approval in
-one window). Every other skill and agent (`feature-pipeline`, `openspec-*`, `task-worker`)
-is internal — never tell the human to run it. Vendored OpenSpec skills name `/opsx:*`
-commands; translate them per `.claude/rules/commands.md`.
+The human uses exactly eight: `/start`, `/kickoff`, `/feature`, `/build`, `/sync-ui`,
+`/finish`, `/fix`, `/orchestrate` — what each does is in `.claude/rules/commands.md`.
+Every other skill and agent (`feature-pipeline`, `openspec-*`, `task-worker`) is internal
+— never tell the human to run it. Vendored OpenSpec skills name `/opsx:*` commands;
+translate them per the same file.
 
 ## Sessions (clock in / clock out)
 
 Every session starts with no memory. The repo is the memory.
 
 - **Clock in:** `npm run ready` (right Node, deps installed), `npm run progress`, then read
-  your section of `PROGRESS.md` (headed by your git email) and `DECISIONS.md`. Continue
-  from "Next step"; don't re-decide anything `DECISIONS.md` settles without asking.
+  your section of `PROGRESS.md` (headed by your `@login` or git email) and `DECISIONS.md`.
+  Continue from "Next step"; don't re-decide anything `DECISIONS.md` settles without asking.
 - **While working:** a choice between real alternatives → one entry in `DECISIONS.md`
   (what, why, what you rejected).
 - **Clock out** (before you stop, even mid-change): `npm run check` green or its failure
@@ -53,9 +50,9 @@ Every session starts with no memory. The repo is the memory.
 ## Feature list
 
 `features.md` is the human's prose; `features.json` is the machine copy: id, `owner` (git
-email), proof command (`verify`) and `scope` (folders it may touch). State lives only in
-`features.ledger.jsonl` (union-merged, so branches never conflict on it). Every entry in
-one has its ID in the other.
+email, or `@login` from `team.json`), proof command (`verify`) and `scope` (folders it may
+touch). State lives only in `features.ledger.jsonl` (union-merged, so branches never
+conflict on it). Every entry in one has its ID in the other.
 
 - States: `not_started → active → passing`, `active ⇄ blocked`. `passing` is final.
 - `npm run features -- start <id>` before coding. Only the owner starts, blocks or verifies

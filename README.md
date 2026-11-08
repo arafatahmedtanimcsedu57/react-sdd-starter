@@ -61,7 +61,7 @@ screens.
 
 ## 3. Build a feature: the daily loop
 
-You only ever type these six commands in `claude`:
+The daily loop in `claude` (all eight commands: `.claude/rules/commands.md`):
 
 ```text
 /feature <idea>  →  edit the design  →  /build <change>  →  review + merge PR  →  /finish <change>
@@ -87,7 +87,13 @@ You can also just describe what you want in plain words; Claude follows the same
 - **One change = one small PR** (≤ 400 reviewable lines, checked in CI). Split big
   features into several `/feature` changes.
 
-### Working as a team: `/orchestrate`
+### Working as a team: `/kickoff`, then `/orchestrate`
+
+The lead runs `/kickoff <PRD path | demo URL | feature list>` once (and again for a new
+PRD version or teammate). It drafts the features, takes the team's GitHub usernames and
+proposes who builds what; after the lead approves, it writes it all in one PR. Each
+teammate then pulls and runs `npm run team -- join` (links their GitHub name to their git
+email); `npm run team` shows the roster.
 
 Each developer owns features (`npm run features` shows the owner) and runs one
 orchestrator window: `/orchestrate F03`. It splits the feature into tasks, starts one
@@ -207,6 +213,7 @@ same checks.
 | `npm run features`      | Feature list: `add`, `start`, `block`, `verify`, `check`      |
 | `npm run progress`      | Print features by owner and open changes (clock in/out)       |
 | `npm run board`         | The orchestrator's board: tasks, workers, what needs you      |
+| `npm run team`          | The roster: `add @login`, `join`, `codeowners`; who owns what |
 | `npm run team:check`    | Is review by the other developer enforced on GitHub? (`gh`)   |
 | `npm run scope`         | Changes outside the active feature's scope                    |
 | `npm run harness:check` | Feature list matches its ledger; `CLAUDE.md` stays short      |

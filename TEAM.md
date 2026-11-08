@@ -8,11 +8,23 @@ the branch rules below are on, every merge has had a second pair of eyes.
 Check the setup any time: `npm run team:check` (read-only; needs `gh`, and admin access to
 read branch protection). `/orchestrate` runs it at clock-in.
 
+## 0. Kickoff (the lead, once per PRD / new teammate)
+
+`/kickoff <PRD path | demo URL | feature list>` drafts the features, takes the team's
+GitHub usernames, and proposes who builds what (foundations first, related features
+together, balanced). Nothing is written until you approve the features and the split;
+then it writes `features.md`, `features.json` (owners as `@login`), `team.json`,
+CODEOWNERS and `PROGRESS.md` sections in one PR, and gives you a short message for each
+teammate. Run it again for a new PRD version or a new person — existing owners stay.
+`npm run team` shows the roster: who joined, and what each owns.
+
 ## 1. Access (repo admin, once per teammate)
 
 1. Settings → Collaborators → add the teammate with **write** access.
-2. Add their GitHub username to **every** line of `.github/CODEOWNERS` (GitHub uses only
-   the last matching line per file, so each line needs both of you), and merge it.
+2. Put their GitHub username on **every** line of `.github/CODEOWNERS` (GitHub uses only
+   the last matching line per file, so each line needs both of you):
+   `npm run team -- add @login` then `npm run team -- codeowners` (`/kickoff` does both),
+   and merge it.
 3. Then turn on branch protection (section 6). **Not before** — with code-owner review
    required and only one real owner, nobody can approve that owner's PRs.
 
@@ -24,16 +36,21 @@ gh auth login
 nvm install && nvm use                  # Node from .nvmrc
 npm ci && npx playwright install chromium
 cp .env.example .env
+npm run team -- join                    # links your GitHub name to your git email; PR team.json
 claude                                  # then: /orchestrate
 ```
 
 ## 3. Who owns what
 
-- `npm run features` shows every feature and its owner (a git email). Only the owner
-  starts, blocks, verifies, re-scopes or hands over a feature; at most 2 active each.
-- Hand a feature over: the current owner runs
-  `npm run features -- owner F0n --set them@example.com` and opens a PR.
-- `PROGRESS.md` has one section per developer, headed by their email. Edit only yours.
+- `npm run features` shows every feature and its owner (`@login` or a git email). Only
+  the owner starts, blocks, verifies, re-scopes or hands over a feature; at most 2 active
+  each. An `@login` owner can do that only after `npm run team -- join`.
+- Hand a feature over: the current owner runs `npm run features -- owner F0n --set
+@login` (someone on `team.json`) and opens a PR.
+- `PROGRESS.md` has one section per developer, headed by `@login` or their email. Edit
+  only yours.
+- `team.json` and the ledger's `join` lines decide who `@login` is. The harness can't
+  check identity: review a changed `team.json` like a changed CODEOWNERS.
 
 ## 4. A normal day
 

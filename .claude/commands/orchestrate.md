@@ -9,8 +9,11 @@ PRs. The owner talks only to you. Design: `openspec/changes/archive/2026-11-08-t
 
 **Clock in:** `npm run ready`, `npm run team:check` (misses → tell the owner once that Gate 2
 isn't enforced on GitHub yet, see `TEAM.md`; keep going), `git fetch`, `npm run progress`, `npm run board -- sync`,
-`npm run board`. Read the owner's `PROGRESS.md` section. The owner is
-`git config user.email`; their `approved:` lines carry the name they give you.
+`npm run board`. Read the owner's `PROGRESS.md` section (`## @login` or `## <email>`). The
+owner is `git config user.email`, or their `@login` once `team.json` links the two; their
+`approved:` lines carry the name they give you. `npm run team` shows them on the roster
+but not joined → have them run `npm run team -- join` first (features owned by `@login`
+can't move until they do).
 
 ## 1. Plan (`$ARGUMENTS` names a feature or an idea)
 
