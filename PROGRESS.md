@@ -26,8 +26,8 @@ Things that affect everyone. Add, don't rewrite.
 
 ### Current work
 
-- team-kickoff: PR A merged (#37). PR B (`chore/team-kickoff-cmd`: `/kickoff` + docs)
-  open, rebased on `master`. After it merges: `/finish team-kickoff`.
+- team-kickoff shipped (#37 roster + `@login` owners, #38 `/kickoff`); archived to
+  `openspec/changes/archive/2026-11-08-team-kickoff/`. Not yet run for real with a teammate.
 
 ### Known issues
 
@@ -40,5 +40,7 @@ Things that affect everyone. Add, don't rewrite.
 
 ### Next step
 
-- Human: review + merge the slice-4 PR; add the teammate (TEAM.md §1); turn on protection
-  (§6); `npm run team:check` green. Then the first real feature through `/orchestrate`.
+- Human: `/kickoff <PRD | demo URL | feature list>` with the teammate's GitHub name (adds
+  them to `team.json` + CODEOWNERS); add them as a collaborator (TEAM.md §1); after that
+  merges, turn on protection (§6) → `npm run team:check` green. Teammate: `npm run team --
+join`, then `/orchestrate <their feature>`.
