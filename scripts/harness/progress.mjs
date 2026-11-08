@@ -45,6 +45,8 @@ if (process.argv.includes('migrate')) {
     const title = github ? `@${github}` : name
     writeFileSync(path(file), `# Progress — ${title}\n\n${body.replace(/^### /gm, '## ')}`)
     console.log(`✓ ${name} → ${file}`)
+    if (/^---\s*$/m.test(body))
+      console.warn(`⚠ ${name}'s section has a "---" rule: check ${file} ends where it should.`)
   }
   writeFileSync(path(PROGRESS), [shared.trimEnd(), ...kept].join('\n\n').concat('\n'))
   console.log(`✓ ${PROGRESS} keeps the shared part. Commit both in one PR.`)

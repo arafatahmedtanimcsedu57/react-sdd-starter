@@ -520,7 +520,7 @@ export function checkProgressDoc(text) {
     .flatMap((line) => PERSON_HEADING.exec(line)?.slice(1, 2) ?? [])
   if (people.length) {
     problems.push(
-      `has per-person sections (${people.join(', ')}); each now lives in progress/<id>.md.\n  FIX: npm run progress -- migrate`,
+      `has per-person sections (${people.join(', ')}); each now lives in progress/<id>.md.\n  FIX: npm run progress -- migrate (a section whose file already exists: merge it into that file by hand, then delete it here)`,
     )
   }
   return problems
@@ -559,8 +559,9 @@ export function splitProgress(doc) {
       sections.push(current)
       continue
     }
-    // Another heading, or a `---` rule, ends a person's section: what follows is shared.
-    if (!fenced && (/^#{1,2} /.test(line) || /^---\s*$/.test(line))) current = null
+    // Another `#` / `##` heading ends a person's section: what follows is shared. (A `---`
+    // rule doesn't — it may sit inside a section; migrate warns so the person checks.)
+    if (!fenced && /^#{1,2} /.test(line)) current = null
     if (current) current.body.push(line)
     else shared.push(line)
   }

@@ -510,11 +510,11 @@ describe('progress edge cases', () => {
     expect(splitProgress(doc).sections).toEqual([])
   })
 
-  it('ends a section at a rule or a top heading, so a footer stays shared', () => {
-    const doc = '# P\n\n## ann@x.io\n- a\n\n---\n\nFooter\n'
+  it('ends a section at the next # / ## heading, not at a --- rule inside it', () => {
+    const doc = '# P\n\n## @bo\n### Current work\n---\n### Next step\n- b\n## Footer\nf\n'
     expect(splitProgress(doc)).toEqual({
-      shared: '# P\n\n---\n\nFooter\n',
-      sections: [{ name: 'ann@x.io', body: '- a\n' }],
+      shared: '# P\n\n## Footer\nf\n',
+      sections: [{ name: '@bo', body: '### Current work\n---\n### Next step\n- b\n' }],
     })
   })
 })
