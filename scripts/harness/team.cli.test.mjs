@@ -1,22 +1,34 @@
 // @vitest-environment node
 // `npm run team` end to end in a throwaway repo, with a fake `gh` that reports a login.
 import { execFileSync, spawnSync } from 'node:child_process'
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { URL, fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 const CLI = fileURLToPath(new URL('./roster.mjs', import.meta.url))
+const MODULES = fileURLToPath(new URL('../../node_modules', import.meta.url))
+// CI has no global git identity and no npx cache: the throwaway repo gets its own git config
+// and this checkout's node_modules (the CLI formats team.json with the local prettier).
+const ENV = { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' }
 let dir
 let bin
 
 const team = (args, login = 'Ana-Dev', email = 'ana@x.io') => {
-  execFileSync('git', ['config', 'user.email', email], { cwd: dir })
+  execFileSync('git', ['config', 'user.email', email], { cwd: dir, env: ENV })
   return spawnSync('node', [CLI, ...args], {
     cwd: dir,
     encoding: 'utf8',
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, FAKE_LOGIN: login },
+    env: { ...ENV, PATH: `${bin}:${process.env.PATH}`, FAKE_LOGIN: login },
   })
 }
 const roster = () => JSON.parse(readFileSync(join(dir, 'team.json'), 'utf8'))
@@ -27,7 +39,8 @@ beforeAll(() => {
   mkdirSync(bin)
   writeFileSync(join(bin, 'gh'), '#!/bin/sh\necho "$FAKE_LOGIN"\n')
   chmodSync(join(bin, 'gh'), 0o755)
-  execFileSync('git', ['init', '-q'], { cwd: dir })
+  execFileSync('git', ['init', '-q'], { cwd: dir, env: ENV })
+  symlinkSync(MODULES, join(dir, 'node_modules'))
   mkdirSync(join(dir, '.github'))
   writeFileSync(join(dir, '.github/CODEOWNERS'), '# owners\n*  @old\n/openspec/  @old\n')
 })
