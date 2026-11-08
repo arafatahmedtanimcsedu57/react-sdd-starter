@@ -2,9 +2,10 @@
 
 ## Current work
 
-- Shipped: team-scale (#40), CI fix (#41), self-registering pages + mocks (#42).
-  `chore/progress-per-person` (Gate 1 approved, review PASS): one handoff file per person —
-  this file is its first. Then the kickoff branch `chore/kickoff-2026-11-08` (F03–F05, @x-dev).
+- Shipped + archived: team-scale (#40), self-registering pages + mocks (#42), one handoff
+  file per person (#43); CI fix (#41), autopilot prompt (#44).
+- The kickoff of F03–F05 with `x-dev` (#45) was a mock — closed, not for the template. The
+  team flow is exercised by `scripts/harness/team-sim.test.mjs` instead.
 
 ## Known issues
 
@@ -17,7 +18,7 @@
 
 ## Next step
 
-- Human: merge the progress-per-person PR; decide whether autopilot.yml's prompt should
-  also read `progress/<id>.md` (a CI file); add @x-dev as a collaborator
-  (TEAM.md §1); after the kickoff PR merges, turn on protection (§6) → `npm run team:check`.
-- Me: rebase the kickoff branch on master (migrate its PROGRESS sections), open it.
+- The template is ready for a real team: a project made from it runs `/start`, then
+  `/kickoff` with real GitHub usernames. Branch protection (TEAM.md §6) is per repo.
+- Possible follow-ups: `npm run features -- remove` (so `/start` can drop the example F02),
+  and a look at conflicts in shared files the simulation didn't cover.
