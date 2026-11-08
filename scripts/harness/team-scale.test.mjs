@@ -6,8 +6,9 @@ import { describe, expect, it } from 'vitest'
 import {
   codeownersMissing,
   findLedgerAnomalies,
+  findLedgerDrift,
   isLead,
-  leadsOf,
+  ledgerLeads,
   nextId,
   notOwnerMessage,
   overLimit,
@@ -65,6 +66,16 @@ describe('duplicate moves (S7: the same start on two branches)', () => {
   })
 })
 
+describe('duplicate moves: merge order', () => {
+  it('a branch that started and blocked, merged after one that only started, is accepted', () => {
+    // start (A), start (B), block (B): the repeat is skipped and the block applies. Only the
+    // other order (block lands before the second start) is flagged as a fork.
+    const start = { id: 'F03', from: 'not_started', to: 'active', by: 'bo@x.io' }
+    const block = { id: 'F03', from: 'active', to: 'blocked', reason: 'r', by: 'bo@x.io' }
+    expect(findLedgerAnomalies([...joins, added('F03', '@bo'), start, start, block])).toEqual([])
+  })
+})
+
 describe('over the limit (S6: three branches, one start each)', () => {
   it('lists owners with more active than the limit, an email and its @login counted as one', () => {
     const f = (id, owner, state = 'active') => ({ id, owner, state })
@@ -77,28 +88,89 @@ describe('over the limit (S6: three branches, one start each)', () => {
 })
 
 describe('leads (S5: a member leaves owning a feature)', () => {
-  it('default to the first member; named leads must be members', () => {
-    expect(leadsOf(team)).toEqual(['ana'])
-    expect(isLead(team, { email: 'ana@x.io', github: 'ANA' })).toBe(true)
-    expect(isLead(team, { email: 'bo@x.io', github: 'bo' })).toBe(false)
-    expect(leadsOf({ ...team, leads: ['bo'] })).toEqual(['bo'])
+  const handover = (id, by, reason) => ({
+    id,
+    event: 'owner',
+    owner: '@ana',
+    by,
+    ...(reason ? { reason } : {}),
+  })
+  const lead = (github, by, remove) => ({
+    event: 'lead',
+    github,
+    by,
+    ...(remove ? { remove } : {}),
+  })
+
+  it('start with the first member to join; a lead adds or removes leads', () => {
+    expect(ledgerLeads(joins)).toEqual(['ana'])
+    expect(ledgerLeads([...joins, lead('bo', 'ana@x.io')])).toEqual(['ana', 'bo'])
+    expect(ledgerLeads([...joins, lead('bo', 'ana@x.io'), lead('ana', 'bo@x.io', true)])).toEqual([
+      'bo',
+    ])
+    expect(isLead(['ana'], { email: 'ana@x.io', github: 'ANA' })).toBe(true)
+    expect(isLead(['ana'], { email: 'bo@x.io', github: 'bo' })).toBe(false)
     expect(() => parseTeam({ ...team, leads: ['zed'] })).toThrow(/lead @zed is not a member/)
   })
 
-  it("may hand over someone else's feature with a reason; others may not", () => {
-    const handover = (by, reason) => [
-      ...joins,
-      added('F03', '@bo'),
-      { id: 'F03', event: 'owner', owner: '@ana', by, ...(reason ? { reason } : {}) },
-    ]
-    expect(findLedgerAnomalies(handover('ana@x.io', 'bo left'), team)).toEqual([])
-    expect(findLedgerAnomalies(handover('ana@x.io'), team)).toEqual([
+  it('refuse lead changes by a non-lead, and removing the last lead', () => {
+    expect(findLedgerAnomalies([...joins, lead('bo', 'bo@x.io')])).toEqual([
+      'ledger line 3 (lead): lead changed by bo@x.io, who is not a lead',
+    ])
+    expect(findLedgerAnomalies([...joins, lead('ana', 'ana@x.io', true)])).toEqual([
+      'ledger line 3 (lead): removes the last lead',
+    ])
+  })
+
+  it("may hand over someone else's unfinished feature, with a reason", () => {
+    const base = [...joins, added('F03', '@bo')]
+    expect(findLedgerAnomalies([...base, handover('F03', 'ana@x.io', 'bo left')])).toEqual([])
+    expect(findLedgerAnomalies([...base, handover('F03', 'ana@x.io')])).toEqual([
       'ledger line 4 (F03): owner changed by ana@x.io, not the owner @bo',
     ])
-    // Only a named lead: with leads: ['bo'], ana's hand-over of bo's feature is refused.
-    const boLead = parseTeam({ ...team, leads: ['bo'] })
-    expect(findLedgerAnomalies(handover('ana@x.io', 'bo left'), boLead)).toEqual([
-      'ledger line 4 (F03): owner changed by ana@x.io, not the owner @bo',
+    // A reason doesn't make a non-lead a lead.
+    expect(findLedgerAnomalies([...base, handover('F03', 'cy@x.io', 'x')])).toEqual([
+      'ledger line 4 (F03): owner changed by cy@x.io, not the owner @bo',
+    ])
+    const shipped = [
+      ...base,
+      { id: 'F03', from: 'not_started', to: 'active', by: 'bo@x.io' },
+      { id: 'F03', from: 'active', to: 'passing', evidence: { commit: 'a' }, by: 'bo@x.io' },
+      handover('F03', 'ana@x.io', 'bo left'),
+    ]
+    expect(findLedgerAnomalies(shipped)).toEqual([
+      'ledger line 6 (F03): a lead hands over a passing feature',
+    ])
+  })
+
+  it('are checked as they were when each line was written', () => {
+    // ana hands over as lead, then stops being one: her old hand-over stays valid …
+    const later = [
+      ...joins,
+      added('F03', '@bo'),
+      handover('F03', 'ana@x.io', 'bo left'),
+      lead('bo', 'ana@x.io'),
+      lead('ana', 'bo@x.io', true),
+    ]
+    expect(findLedgerAnomalies(later)).toEqual([])
+    // … and making bo a lead later doesn't bless his earlier hand-over.
+    const early = [
+      ...joins,
+      added('F04', '@ana'),
+      { ...handover('F04', 'bo@x.io', 'x'), owner: '@bo' },
+      lead('bo', 'ana@x.io'),
+    ]
+    expect(findLedgerAnomalies(early)).toEqual([
+      'ledger line 4 (F04): owner changed by bo@x.io, not the owner @ana',
+    ])
+  })
+
+  it('in team.json must match the ledger when listed', () => {
+    const list = { version: 2, features: [] }
+    expect(findLedgerDrift(list, joins, { ...team, leads: ['ana'] })).toEqual([])
+    expect(findLedgerDrift(list, joins, team)).toEqual([])
+    expect(findLedgerDrift(list, joins, { ...team, leads: ['bo'] })).toEqual([
+      'team.json leads are [bo] but the ledger says [ana]: use npm run team -- lead',
     ])
   })
 })

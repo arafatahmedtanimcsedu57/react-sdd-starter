@@ -18,6 +18,7 @@ import {
   addFeature,
   findLedgerDrift,
   isLead,
+  ledgerLeads,
   isOwner,
   nextId,
   notOwnerMessage,
@@ -144,13 +145,22 @@ function verify(state, featureId) {
 // Ids on master and every pushed branch, so two people adding a feature the same day don't
 // both take the next one (and then "keep both" in the conflict). Offline → cached refs.
 function idsElsewhere() {
-  git('fetch', '--quiet')
+  const fetched = spawnSync('git', ['fetch', '--quiet'], {
+    cwd: path('.'),
+    timeout: 10_000,
+    stdio: 'ignore',
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  })
+  if (fetched.status !== 0)
+    console.warn('⚠ git fetch failed (offline?): using the refs already here')
   const where = new Map()
-  for (const ref of git('for-each-ref', '--format=%(refname:short)', 'refs/remotes').split('\n')) {
+  const refs = git('for-each-ref', '--format=%(refname)', 'refs/remotes', 'refs/heads')
+  for (const ref of refs.split('\n')) {
     if (!ref || ref.endsWith('/HEAD')) continue
+    const name = ref.replace(/^refs\/(remotes|heads)\//, '')
     try {
       for (const f of JSON.parse(git('show', `${ref}:features.json`) || '{}').features ?? []) {
-        if (!where.has(f.id)) where.set(f.id, ref)
+        if (!where.has(f.id)) where.set(f.id, name)
       }
     } catch {
       // not a v2 list on that branch: nothing to reserve
@@ -201,7 +211,7 @@ function setDefinition(state, featureId, change, ledgerLine, { leadMay = false }
   if (!current) fail(`${featureId} is not in features.json.`)
   const me = caller()
   if (!isOwner(current.owner, me)) {
-    const lead = leadMay && isLead(readTeam(), me)
+    const lead = leadMay && isLead(ledgerLeads(state.ledger), me)
     if (!lead) fail(notOwnerMessage(featureId, current.owner, me, 'changes its scope or owner'))
     if (!values.reason) fail(`A lead handing over ${featureId} must say why: --reason "…"`)
     if (state.features.find((f) => f.id === featureId).state === 'passing') {

@@ -24,12 +24,13 @@ feature work. What broke:
 
 1. **Duplicate moves are harmless (S7).** The ledger replay accepts a move that repeats the
    state the feature is already in (same `to`, by its owner) as a duplicate — it changes
-   nothing. Real forks (`active` on one branch, `blocked` on the other) still fail.
+   nothing. A fork is flagged only when the repeat lands after a different move (start + block on one branch merged before a start on another); the other order is accepted, since the block then applies.
 2. **Over the limit is visible (S6).** `features check` and `npm run progress` warn —
    not fail — when an owner has more than `limits.activePerOwner` active; failing master
    would block everyone for one person's overlap.
-3. **Leads can reassign (S5).** `team.json` gets `"leads": ["<login>"]` (default: the first
-   member). A lead may run `npm run features -- owner <id> --set @x --reason "<why>"` on
+3. **Leads can reassign (S5).** Leads are recorded in the ledger like joins (the first
+   member to join is the first; `npm run team -- lead @x [--remove]`), mirrored in
+   `team.json` `leads`. A lead may run `npm run features -- owner <id> --set @x --reason "<why>"` on
    any feature that isn't `passing`; the ledger line carries the reason and the ledger
    check accepts it. `npm run team -- remove @login` drops a member who owns no open
    feature (else it lists them to reassign first).

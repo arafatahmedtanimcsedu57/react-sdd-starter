@@ -35,8 +35,8 @@ const teamSchema = z.object({
       name: z.string().optional(),
     }),
   ),
-  // Who may hand over anyone's unfinished feature (someone left or is away). Absent → the
-  // first member. Changed only in a reviewed PR, like the rest of team.json.
+  // A readable copy of who may hand over anyone's unfinished feature. The ledger is the
+  // record (`npm run team -- lead`); when present, this must match it.
   leads: z.array(z.string().regex(LOGIN, 'leads must be GitHub usernames (no @)')).optional(),
 })
 
@@ -61,12 +61,45 @@ export function parseTeam(data) {
   return result.data
 }
 
-/** The leads' logins: `team.leads`, or the first member when none are named. */
-export const leadsOf = (team) =>
-  team?.leads?.length ? team.leads : team?.members?.length ? [team.members[0].github] : []
-export const isLead = (team, me) => {
+/**
+ * Leads, replayed from the ledger like joins: the first member to join founds the team as
+ * its lead; `{ event: 'lead', github, remove? }` lines (written by a lead) add or remove one.
+ * `step(e)` applies one line and returns a problem, or null.
+ */
+export function leadReplay() {
+  const leads = new Set()
+  let founded = false
+  return {
+    leads,
+    has: (login) => Boolean(login) && leads.has(login.toLowerCase()),
+    step(e, byLogin) {
+      if (e.event === 'join' && !founded && e.github) {
+        founded = true
+        leads.add(e.github.toLowerCase())
+      }
+      if (e.event !== 'lead' || !e.github) return null
+      if (!leads.has(byLogin?.toLowerCase())) return `lead changed by ${e.by}, who is not a lead`
+      if (e.remove) leads.delete(e.github.toLowerCase())
+      else leads.add(e.github.toLowerCase())
+      return leads.size ? null : 'removes the last lead'
+    },
+  }
+}
+
+/** The leads now (lowercase logins), from the ledger. */
+export function ledgerLeads(ledger) {
+  const replay = leadReplay()
+  const joined = {}
+  for (const e of ledger) {
+    if (e.event === 'join' && e.by && e.github) joined[e.by.toLowerCase()] = e.github
+    replay.step(e, joined[e.by?.toLowerCase()])
+  }
+  return [...replay.leads]
+}
+
+export const isLead = (leads, me) => {
   const github = asMe(me).github?.toLowerCase()
-  return Boolean(github) && leadsOf(team).some((l) => l.toLowerCase() === github)
+  return Boolean(github) && leads.some((l) => l.toLowerCase() === github)
 }
 
 /** The GitHub login of the member who joined with `email`, if any. */
@@ -244,8 +277,11 @@ const sameScope = (a, b) => [...a].sort().join('\n') === [...b].sort().join('\n'
  * change or hand-over by someone other than the owner. Lines from before owners existed
  * carry no `by`; once one line has it, every later line must.
  */
-export function findLedgerAnomalies(ledger, team) {
+export function findLedgerAnomalies(ledger) {
   const problems = []
+  // Leads in force when each line was written, so removing a lead later never turns their
+  // old hand-overs red, and making someone a lead never blesses their old lines.
+  const leads = leadReplay()
   const state = {}
   const owner = {}
   // email → @login, from the `join` lines seen so far: a line is checked against the links
@@ -256,10 +292,10 @@ export function findLedgerAnomalies(ledger, team) {
     const where = `ledger line ${i + 1} (${e.id ?? e.event})`
     if (e.by) sawBy = true
     else if (sawBy) problems.push(`${where} has no "by" — written by hand?`)
-    if (e.event === 'join') {
-      if (e.by && e.github) joined[e.by.toLowerCase()] = e.github
-      return
-    }
+    if (e.event === 'join' && e.by && e.github) joined[e.by.toLowerCase()] = e.github
+    const leadProblem = leads.step(e, joined[e.by?.toLowerCase()])
+    if (leadProblem) problems.push(`${where}: ${leadProblem}`)
+    if (e.event === 'join' || e.event === 'lead') return
     const checked = Boolean(e.by)
     const byOwner = () => isOwner(owner[e.id], { email: e.by, github: joined[e.by.toLowerCase()] })
     const notOwner = (what) =>
@@ -268,8 +304,13 @@ export function findLedgerAnomalies(ledger, team) {
         : []
 
     if (e.event === 'owner') {
-      const byLead = e.reason && isLead(team, { github: joined[e.by?.toLowerCase()] })
+      const asLead = checked && owner[e.id] && !byOwner()
+      const byLead = e.reason && leads.has(joined[e.by?.toLowerCase()])
       if (!byLead) problems.push(...notOwner('owner changed'))
+      // As the CLI: a lead may not take over a shipped feature (its owner may re-label it).
+      if (asLead && byLead && state[e.id] === 'passing') {
+        problems.push(`${where}: a lead hands over a passing feature`)
+      }
       owner[e.id] = e.owner
       return
     }
@@ -324,6 +365,19 @@ function rosterDrift(team, ledger) {
     )
 }
 
+/** team.json `leads` (when present) that differ from the ledger's: a hand edit. */
+function leadDrift(team, ledger) {
+  if (!team?.leads) return []
+  const want = ledgerLeads(ledger).sort().join(', ')
+  const have = team.leads
+    .map((l) => l.toLowerCase())
+    .sort()
+    .join(', ')
+  return want === have
+    ? []
+    : [`team.json leads are [${have}] but the ledger says [${want}]: use npm run team -- lead`]
+}
+
 /** Definitions in features.json that the ledger doesn't back up (edited by hand). */
 export function findLedgerDrift(list, ledger, team) {
   const defs = replayDefinitions(ledger)
@@ -345,7 +399,8 @@ export function findLedgerDrift(list, ledger, team) {
       if (!recorded.owner) problems.push(`${f.id} has no owner in the ledger`)
       return problems
     })
-    .concat(findLedgerAnomalies(ledger, team))
+    .concat(findLedgerAnomalies(ledger))
+    .concat(leadDrift(team, ledger))
     .concat(rosterDrift(team, ledger))
 }
 
@@ -841,14 +896,12 @@ export function checkTeamSetup({ branch, protection, collaborators, codeowners }
 }
 
 /**
- * CODEOWNERS with every owned rule owned by every member. Comments, patterns (escaped spaces
- * included), inline comments and line endings are kept; a rule with no owners is left
- * unowned on purpose.
+ * Owned CODEOWNERS lines that miss a roster member (e.g. a bad conflict resolution). A line
+ * owned by a GitHub team (`@org/team`) or an email is the team's own choice: skipped.
  */
-/** Owned CODEOWNERS lines that miss a roster member (e.g. a bad conflict resolution). */
 export function codeownersMissing(text, logins) {
   return parseCodeowners(text)
-    .filter((r) => r.owners.length)
+    .filter((r) => r.owners.length && r.owners.every((o) => /^@[^/@]+$/.test(o)))
     .flatMap((r) => {
       const listed = new Set(r.owners.map((o) => o.toLowerCase()))
       const missing = logins.filter((l) => !listed.has(`@${l}`.toLowerCase()))
@@ -856,6 +909,11 @@ export function codeownersMissing(text, logins) {
     })
 }
 
+/**
+ * CODEOWNERS with every owned rule owned by every member. Comments, patterns (escaped spaces
+ * included), inline comments and line endings are kept; a rule with no owners is left
+ * unowned on purpose.
+ */
 export function renderCodeowners(text, logins) {
   const owners = logins.map((l) => `@${l}`).join(' ')
   return String(text)

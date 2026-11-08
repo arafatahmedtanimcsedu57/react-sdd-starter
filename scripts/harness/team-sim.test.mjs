@@ -9,6 +9,7 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -23,7 +24,16 @@ const MODULES = fileURLToPath(new URL('../../node_modules', import.meta.url))
 let world
 let bin
 
-const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: 'pipe' })
+// The developer's own git config (signing, hooks, identity) must not leak in.
+const ENV = {
+  ...process.env,
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_NOSYSTEM: '1',
+  GIT_TERMINAL_PROMPT: '0',
+}
+const STEP = 20_000 // per scenario; CI is slower than a laptop
+const git = (cwd, ...args) =>
+  execFileSync('git', args, { cwd, encoding: 'utf8', stdio: 'pipe', env: ENV })
 const clone = (who) => join(world, who)
 
 /** `who` runs `node scripts/harness/<script> …args` in their own clone. */
@@ -31,7 +41,7 @@ function as(who, script, ...args) {
   const r = spawnSync('node', [join(HARNESS, script), ...args], {
     cwd: clone(who),
     encoding: 'utf8',
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, FAKE_LOGIN: who },
+    env: { ...ENV, PATH: `${bin}:${process.env.PATH}`, FAKE_LOGIN: who },
   })
   return { ok: r.status === 0, out: `${r.stdout}${r.stderr}` }
 }
@@ -107,6 +117,8 @@ beforeAll(() => {
   const seed = join(world, 'seed')
   mkdirSync(join(seed, '.github'), { recursive: true })
   git(seed, 'init', '-q', '-b', 'master')
+  git(seed, 'config', 'user.email', 'seed@team.io')
+  git(seed, 'config', 'user.name', 'seed')
   writeFileSync(join(seed, '.gitattributes'), 'features.ledger.jsonl merge=union\n')
   writeFileSync(join(seed, 'features.json'), '{ "version": 2, "features": [] }\n')
   writeFileSync(join(seed, 'features.ledger.jsonl'), '')
@@ -145,7 +157,8 @@ beforeAll(() => {
 }, 60_000)
 afterAll(() => rmSync(world, { recursive: true, force: true }))
 
-describe('a team on the harness', () => {
+// One story, in order: each scenario builds on the state the previous one left.
+describe('a team on the harness', { timeout: STEP }, () => {
   it('S7: the same feature started on two branches keeps master green', () => {
     for (const b of ['f01-a', 'f01-b']) {
       branch('ana', b)
@@ -185,19 +198,36 @@ describe('a team on the harness', () => {
     expect(['merged', 'conflict']).toContain(mergePr('add-export'))
   })
 
-  it("S5: a lead hands over a departed member's feature, with a reason; others cannot", () => {
+  it("S5: a lead hands over a departed member's features; then the lead steps down", () => {
     branch('cy', 'grab')
-    expect(as('cy', 'features.mjs', 'owner', 'F02', '--set', '@cy').out).toMatch(
-      /belongs to @bo; you are @cy/,
+    expect(as('cy', 'features.mjs', 'owner', 'F02', '--set', '@cy', '--reason', 'x').out).toMatch(
+      /belongs to @bo; you are @cy/, // a reason doesn't make cy a lead
     )
     branch('ana', 'bo-left')
     expect(as('ana', 'features.mjs', 'owner', 'F04', '--set', '@cy').out).toMatch(/--reason/)
-    expect(
-      as('ana', 'features.mjs', 'owner', 'F04', '--set', '@cy', '--reason', 'bo left').ok,
-    ).toBe(true)
-    expect(as('ana', 'roster.mjs', 'remove', '@bo').out).toMatch(/still owns F02, F03/)
+    expect(as('ana', 'roster.mjs', 'remove', '@bo').out).toMatch(/still owns F02, F03, F04/)
+    for (const id of ['F02', 'F03', 'F04']) {
+      expect(as('ana', 'features.mjs', 'owner', id, '--set', '@cy', '--reason', 'bo left').ok).toBe(
+        true,
+      )
+    }
+    expect(as('ana', 'roster.mjs', 'remove', '@bo').ok).toBe(true)
+    // bo is still listed (extra, not missing): `codeowners` drops him.
+    expect(as('ana', 'roster.mjs', 'codeowners').ok).toBe(true)
+    expect(readFileSync(join(clone('ana'), '.github/CODEOWNERS'), 'utf8')).toBe('*  @ana @cy\n')
     push('ana', 'bo left')
     expect(mergePr('bo-left')).toBe('merged')
+
+    // ana makes cy a lead, cy takes ana's lead role away: ana's old hand-overs stay valid.
+    branch('ana', 'cy-lead')
+    expect(as('ana', 'roster.mjs', 'lead', '@cy').ok).toBe(true)
+    push('ana', 'cy lead')
+    expect(mergePr('cy-lead')).toBe('merged')
+    branch('cy', 'ana-steps-down')
+    expect(as('cy', 'roster.mjs', 'lead', '@ana', '--remove').ok).toBe(true)
+    expect(as('cy', 'roster.mjs', 'lead', '@cy', '--remove').out).toMatch(/last lead/)
+    push('cy', 'ana steps down')
+    expect(mergePr('ana-steps-down')).toBe('merged')
   })
 
   it('S3b: a late joiner is told to join on this branch', () => {
