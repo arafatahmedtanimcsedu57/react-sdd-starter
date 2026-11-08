@@ -1,18 +1,17 @@
 # Who gets asked to review what. Both developers own everything, so each PR is reviewed by
 # the one who didn't write it (GitHub never lets an author approve their own PR). With
 # "Require review from Code Owners" these reviews are mandatory — `npm run team:check`.
-# TODO: replace with your teammate's GitHub username (TEAM.md).
 
-*                                   @arafatahmedtanimcsedu57
+*                                   @arafatahmedtanimcsedu57 @x-dev
 
 # Gate 1 — specs are reviewed like code. Approving a spec PR is approving tasks.md.
-/openspec/                          @arafatahmedtanimcsedu57
+/openspec/                          @arafatahmedtanimcsedu57 @x-dev
 
 # The contract: a change here can break the backend handshake.
-/src/features/*/schema.ts           @arafatahmedtanimcsedu57
-/src/services/                      @arafatahmedtanimcsedu57
+/src/features/*/schema.ts           @arafatahmedtanimcsedu57 @x-dev
+/src/services/                      @arafatahmedtanimcsedu57 @x-dev
 
 # The rules the agent follows, and the machines that enforce them.
-/CLAUDE.md                          @arafatahmedtanimcsedu57
-/.claude/                           @arafatahmedtanimcsedu57
-/.github/                           @arafatahmedtanimcsedu57
+/CLAUDE.md                          @arafatahmedtanimcsedu57 @x-dev
+/.claude/                           @arafatahmedtanimcsedu57 @x-dev
+/.github/                           @arafatahmedtanimcsedu57 @x-dev

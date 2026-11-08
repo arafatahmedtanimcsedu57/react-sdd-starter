@@ -9,3 +9,6 @@
 {"at":"2026-11-07T19:28:37.950Z","commit":"262535e","by":"arafatahmedtanimcsedu57@gmail.com","id":"F01","event":"owner","owner":"arafatahmedtanimcsedu57@gmail.com"}
 {"at":"2026-11-07T19:28:37.955Z","commit":"262535e","by":"arafatahmedtanimcsedu57@gmail.com","id":"F02","event":"owner","owner":"arafatahmedtanimcsedu57@gmail.com"}
 {"at":"2026-11-07T20:53:43.037Z","commit":"050c22c","by":"arafatahmedtanimcsedu57@gmail.com","event":"join","github":"arafatahmedtanimcsedu57"}
+{"at":"2026-11-08T14:23:59.395Z","commit":"f65a13d","by":"arafatahmedtanimcsedu57@gmail.com","id":"F03","from":null,"to":"not_started","scope":["src/features/auth","src/routes","src/stores","src/services","src/mocks"],"owner":"@arafatahmedtanimcsedu57"}
+{"at":"2026-11-08T14:23:59.688Z","commit":"f65a13d","by":"arafatahmedtanimcsedu57@gmail.com","id":"F04","from":null,"to":"not_started","scope":["src/features/dashboard","src/routes","src/mocks"],"owner":"@x-dev"}
+{"at":"2026-11-08T14:23:59.975Z","commit":"f65a13d","by":"arafatahmedtanimcsedu57@gmail.com","id":"F05","from":null,"to":"not_started","scope":["src/features/profile","src/routes","src/mocks"],"owner":"@x-dev"}

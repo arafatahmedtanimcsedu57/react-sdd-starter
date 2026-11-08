@@ -1,13 +1,13 @@
 # Progress
 
-The team-wide part of the handoff note. Treat every session as a new engineer with no
-memory: **clock in** with `npm run progress` (features by owner, open changes), then read
-**your** file + this page + `DECISIONS.md`; **clock out** by updating your file (see
-`CLAUDE.md` → Sessions).
+The handoff note between sessions. Treat every session as a new engineer with no memory:
+**clock in** with `npm run progress` (features by owner, open changes), then read **your**
+section below + `DECISIONS.md`; **clock out** by updating your section (see `CLAUDE.md` →
+Sessions).
 
-Each developer's own notes live in `progress/<login>.md` (or `progress/<email>.md` before
-`npm run team -- join`), from `progress/_template.md`. Only you edit yours, so they never
-conflict. A `## @login` / `## <email>` section here fails `harness:check`.
+One section per developer, headed by their `@login` or git email (`git config
+user.email`). Edit only your own: two developers editing different sections merge without
+conflicts.
 
 ## Team-wide known issues
 
@@ -21,3 +21,12 @@ Things that affect everyone. Add, don't rewrite.
   already pins Node there).
 - Claude Code creates worker worktrees from `master`, not the current branch, so a harness
   fix reaches workers only after it is merged.
+
+- **Kickoff plan (2026-11-08)** — approved by the lead. Open questions live in each
+  `features.md` entry; settle them in that feature's `/orchestrate` before its UI tasks.
+
+  | Feature                      | Size  | Depends on          | Owner                    | Start |
+  | ---------------------------- | ----- | ------------------- | ------------------------ | ----- |
+  | F03 Sign in and registration | L (3) | —                   | @arafatahmedtanimcsedu57 | 1     |
+  | F04 Dashboard                | M (2) | F03's contract task | @x-dev                   | 2     |
+  | F05 Profile                  | M (2) | F03's contract task | @x-dev                   | 2     |

@@ -2,9 +2,11 @@
 
 ## Current work
 
-- Shipped: team-scale (#40), CI fix (#41), self-registering pages + mocks (#42).
-  `chore/progress-per-person` (Gate 1 approved, review PASS): one handoff file per person —
-  this file is its first. Then the kickoff branch `chore/kickoff-2026-11-08` (F03–F05, @x-dev).
+- Shipped today: team-scale (#40), CI fix (#41), self-registering pages + mocks (#42), one
+  handoff file per person (#43), autopilot prompt (#44).
+- `chore/kickoff-2026-11-08`: kickoff written — F03 (mine), F04 + F05 (@x-dev), `@x-dev` on
+  `team.json` + CODEOWNERS + `progress/x-dev.md`. Waiting: the kickoff PR (reviewer
+  @x-dev), then @x-dev's join.
 
 ## Known issues
 
@@ -17,7 +19,7 @@
 
 ## Next step
 
-- Human: merge the progress-per-person PR; decide whether autopilot.yml's prompt should
-  also read `progress/<id>.md` (a CI file); add @x-dev as a collaborator
-  (TEAM.md §1); after the kickoff PR merges, turn on protection (§6) → `npm run team:check`.
-- Me: rebase the kickoff branch on master (migrate its PROGRESS sections), open it.
+- Human: merge the kickoff PR; add @x-dev as a collaborator (TEAM.md §1); then turn on
+  protection (§6) → `npm run team:check` green. `/finish` for team-scale,
+  self-registering-features and progress-per-person (merged, not archived yet).
+- Me: `/orchestrate F03` — its first task (user/session contract + mocks) unblocks @x-dev.
