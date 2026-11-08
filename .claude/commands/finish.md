@@ -19,7 +19,7 @@ the open changes and ask which one — never guess.
    by `verify` during `/build`); if it doesn't, stop and say so. Then update the feature's
    entry in `features.md` and run `npm run progress`.
 4. **Ship the bookkeeping.** On a new branch `chore/archive-<change>`, commit the archive +
-   `features.md` + `PROGRESS.md` update and open a small PR (confirm before pushing). Never push to the
+   `features.md` + your `progress/<id>.md` update and open a small PR (confirm before pushing). Never push to the
    default branch.
 5. **Learn.** Look back at what the human corrected at both gates. If a correction repeats,
    propose a one-line `CLAUDE.md` rule; add it only if they agree.

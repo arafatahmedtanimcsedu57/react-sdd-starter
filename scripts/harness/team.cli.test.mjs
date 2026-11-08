@@ -63,6 +63,7 @@ describe('npm run team', () => {
     const run = team(['join'], 'ana-dev', 'ana@x.io')
     expect(run.stdout).toMatch(/@ana-dev ↔ ana@x.io/)
     expect(roster().members[0]).toEqual({ github: 'ana-dev', email: 'ana@x.io' })
+    expect(readFileSync(join(dir, 'progress/ana-dev.md'), 'utf8')).toMatch(/# Progress — @ana-dev/)
     expect(team([]).stdout).toMatch(
       /@ana-dev {2}lead, joined as ana@x.io[\s\S]*@bo {2}not joined yet/,
     )

@@ -46,6 +46,6 @@ to run `/feature <description>` instead. Stop.
    from `CLAUDE.md` → Human in the loop. "Review carefully" names the fixed line and the
    test that proves it. Open it as the feature-pipeline skill says (step 6 → "How to open
    it").
-8. **Clock out** (`CLAUDE.md` → Sessions): note the fix in `PROGRESS.md`.
+8. **Clock out** (`CLAUDE.md` → Sessions): note the fix in your `progress/<id>.md`.
 9. **STOP at Gate 2.** Send the PR link, the root cause in one sentence, and the test that
    now guards it. Do not merge. No `/finish` is needed — there's no change folder to archive.

@@ -12,8 +12,8 @@ exactly one change is open, use it; otherwise list them and ask.
 
 ## Steps
 
-0. **Clock in** (`CLAUDE.md` → Sessions): `npm run progress`, read `PROGRESS.md` and
-   `DECISIONS.md`. Find the change's feature id on the `Feature:` line of `proposal.md`.
+0. **Clock in** (`CLAUDE.md` → Sessions): `npm run progress`, read your `progress/<id>.md`,
+   `PROGRESS.md` and `DECISIONS.md`. Find the change's feature id on the `Feature:` line of `proposal.md`.
 1. **Re-read the design.** Read the feature's page from the live canvas — the human may have
    edited it since `/feature`. Compare it with `design.md` / `tasks.md` and classify each
    difference (visual or behaviour, see claude-design.md). Behaviour differences → update
@@ -51,4 +51,4 @@ exactly one change is open, use it; otherwise list them and ask.
 6. **Ship + GATE 2** — confirm, push, open a PR filling in every section of
    `.github/pull_request_template.md`, including **Design** (link, screenshots, differences).
    Open it as the feature-pipeline skill says (step 6 → "How to open it"). Clock out
-   (`CLAUDE.md` → Sessions) so `PROGRESS.md` names the PR and what's next. STOP. Never merge. After the human merges, tell them to run `/finish <change-name>`.
+   (`CLAUDE.md` → Sessions) so your `progress/<id>.md` names the PR and what's next. STOP. Never merge. After the human merges, tell them to run `/finish <change-name>`.

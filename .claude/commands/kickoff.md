@@ -75,8 +75,8 @@ e2e/<slug>.spec.ts` for a user flow, else `npx vitest run src/features/<slug>`. 
    `**Status:** not started` (prose only — state lives in the ledger).
 4. Two or more members → `npm run team -- codeowners`, and delete the template's
    `# TODO: replace with your teammate's GitHub username` line if it's still there.
-5. `PROGRESS.md`: an empty `## @login` section (Current work / Known issues / Next step)
-   for each new member; the approved table under **Team-wide known issues** as
+5. `progress/<login>.md` from `progress/_template.md` for each new member (their `join`
+   keeps it); in `PROGRESS.md` the approved table under **Team-wide known issues** as
    "Kickoff plan (<date>)".
 6. `npm run check`, commit, then ask the lead before pushing. The PR's reviewer is another
    member; "Review carefully": `features.json`, the ledger, `team.json`, CODEOWNERS.
@@ -96,5 +96,5 @@ After the kickoff PR is merged:
 2. claude → /orchestrate F0n
 ```
 
-**Clock out:** your `PROGRESS.md` section → what was written, what's waiting (the PR, each
+**Clock out:** your `progress/<id>.md` → what was written, what's waiting (the PR, each
 teammate's join). Never merge, never move a feature's state, never write `approved:` lines.

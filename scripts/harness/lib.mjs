@@ -503,12 +503,59 @@ export function renderProgress({ features, changes }) {
 // always conflicted there. It is printed now, and must not come back into the file.
 const OLD_MARKERS = /<!-- harness:auto:(start|end) -->/
 
+// A `## @login` / `## <email>` heading: a per-person section, which now lives in its own
+// file (two people adding theirs the same day always conflicted at the end of PROGRESS.md).
+const PERSON_HEADING = /^## (@[A-Za-z\d-]+|[^@\s]+@[^@\s]+)\s*$/gm
+
 export function checkProgressDoc(text) {
-  return OLD_MARKERS.test(text)
+  const problems = OLD_MARKERS.test(text)
     ? [
         'has the old generated block (harness:auto markers). Remove it; `npm run progress` prints it.',
       ]
     : []
+  const people = [...String(text).matchAll(PERSON_HEADING)].map((m) => m[1])
+  if (people.length) {
+    problems.push(
+      `has per-person sections (${people.join(', ')}); each now lives in progress/<id>.md.\n  FIX: npm run progress -- migrate`,
+    )
+  }
+  return problems
+}
+
+/** Your handoff file: `progress/<login>.md` once joined, else `progress/<email>.md`. */
+export const progressFile = (me) => {
+  const { email, github } = asMe(me)
+  const id = github || email
+  return id ? `progress/${id.toLowerCase()}.md` : null
+}
+
+/** A handoff file's text, whitespace-normalised (what clock-out compares). */
+export const progressText = (text) => String(text).replace(/\s+/g, ' ').trim()
+
+/**
+ * PROGRESS.md split for `npm run progress -- migrate`: the shared part (everything that isn't
+ * a per-person section) and each `## @login` / `## <email>` section's name and body.
+ */
+export function splitProgress(doc) {
+  const lines = String(doc).split('\n')
+  const shared = []
+  const sections = []
+  let current = null
+  for (const line of lines) {
+    const person = /^## (@[A-Za-z\d-]+|[^@\s]+@[^@\s]+)\s*$/.exec(line)
+    if (person) {
+      current = { name: person[1], body: [] }
+      sections.push(current)
+    } else if (/^## /.test(line)) {
+      current = null
+      shared.push(line)
+    } else if (current) current.body.push(line)
+    else shared.push(line)
+  }
+  return {
+    shared: `${shared.join('\n').trimEnd()}\n`,
+    sections: sections.map((s) => ({ name: s.name, body: `${s.body.join('\n').trim()}\n` })),
+  }
 }
 
 /**
@@ -529,18 +576,18 @@ export function ownSection(doc, names) {
 }
 
 /**
- * Clock-out's PROGRESS.md rule, or null when it holds. `now` / `before` are the caller's
- * section today and at the fork point (null = no section). Nothing changed → nothing to
+ * Clock-out's handoff rule, or null when it holds. `now` / `before` are the caller's
+ * `progress/<id>.md` today and at the fork point (null = no file). Nothing changed → nothing to
  * hand off; on the default branch only the commit check applies.
  */
-export function progressProblem({ changed, now, before, onDefault, email }) {
-  if (!email) return 'git has no user.email.\nFIX: git config user.email you@example.com'
+export function progressProblem({ changed, now, before, onDefault, file }) {
+  if (!file) return 'git has no user.email.\nFIX: git config user.email you@example.com'
   if (!changed.length) return null
   if (now === null) {
-    return `PROGRESS.md has no section for you.\nFIX: add "## ${email}" with Current work, Known issues, Next step.`
+    return `You have no handoff file.\nFIX: mkdir -p progress && cp progress/_template.md ${file}, then fill in Current work, Known issues, Next step.`
   }
   if (!onDefault && before !== null && before === now) {
-    return `This branch changes files but not your PROGRESS.md section.\nFIX: update Current work, Known issues and Next step under "## ${email}".`
+    return `This branch changes files but not ${file}.\nFIX: update its Current work, Known issues and Next step.`
   }
   return null
 }

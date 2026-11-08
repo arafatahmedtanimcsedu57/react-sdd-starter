@@ -8,8 +8,8 @@
 //   npm run team -- lead @login [--remove]   (a lead) make someone a lead, or stop
 //   npm run team -- codeowners      rewrite .github/CODEOWNERS: every line → every member
 import { spawnSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { isLead, isOwner, ledgerLeads, parseTeam, renderCodeowners } from './lib.mjs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { isLead, isOwner, ledgerLeads, parseTeam, progressFile, renderCodeowners } from './lib.mjs'
 import {
   appendLedger,
   fail,
@@ -103,6 +103,21 @@ switch (command) {
       members: team.members.map((m) => (m === member ? { ...m, github: login, email } : m)),
     })
     console.log(`✓ @${login} ↔ ${email}`)
+    // Your handoff file, which only you edit: progress/<login>.md (renamed from the email one).
+    const mineFile = progressFile({ email, github: login })
+    const emailFile = progressFile({ email })
+    if (!existsSync(path(mineFile))) {
+      mkdirSync(path('progress'), { recursive: true })
+      if (existsSync(path(emailFile))) renameSync(path(emailFile), path(mineFile))
+      else {
+        const template = path('progress/_template.md')
+        const text = existsSync(template)
+          ? readFileSync(template, 'utf8').replace(/^# Progress — .*$/m, `# Progress — @${login}`)
+          : `# Progress — @${login}\n\n## Current work\n\n## Known issues\n\n## Next step\n`
+        writeFileSync(path(mineFile), text)
+      }
+      console.log(`✓ your handoff file: ${mineFile}`)
+    }
     const ready = spawnSync(process.execPath, [path('scripts/harness/ready.mjs')], {
       encoding: 'utf8',
     })
@@ -116,7 +131,7 @@ switch (command) {
     const mine = featuresOf({ github: login, email }).filter((f) => f.state !== 'passing')
     console.log(
       mine.length
-        ? `Your features: ${mine.map((f) => `${f.id} ${f.title}`).join(', ')}\nNext: commit team.json + the ledger in a PR and get it merged — until then only branches made from this one know it's you (and /orchestrate's workers start from master). Then /orchestrate ${mine[0].id}`
+        ? `Your features: ${mine.map((f) => `${f.id} ${f.title}`).join(', ')}\nNext: commit team.json, the ledger and ${mineFile} in a PR and get it merged — until then only branches made from this one know it's you (and /orchestrate's workers start from master). Then /orchestrate ${mine[0].id}`
         : 'No open features for you yet. Next: commit team.json in a PR; the lead assigns work with /kickoff.',
     )
     break
