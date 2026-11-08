@@ -34,6 +34,7 @@ Format:
   a central id counter file — it conflicts exactly like `features.json`; union-merging
   `PROGRESS.md` — two edits to one line would both survive (per-person files: later);
   leads read from today's `team.json` — a departed lead's old hand-overs would fail master.
+
 ## 2026-11-08: Pages and mocks register themselves
 
 - Why: every feature edited `src/routes/routes.tsx` and `src/mocks/handlers.ts`, so with a
