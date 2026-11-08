@@ -28,9 +28,10 @@ Things that affect everyone. Add, don't rewrite.
 
 - team-kickoff shipped (#37 roster + `@login` owners, #38 `/kickoff`); archived to
   `openspec/changes/archive/2026-11-08-team-kickoff/`. Not yet run for real with a teammate.
-- `chore/team-scale` (Gate 1 approved): fixes from a simulated 7-person team (duplicate
-  moves, over-limit warning, leads hand over, ids free across branches, CODEOWNERS check);
-  `team-sim.test.mjs`. Separate: `chore/kickoff-2026-11-08` (F03–F05, @x-dev), not pushed.
+- team-scale shipped (#40), CI fix (#41). `chore/self-registering` (Gate 1 approved):
+  pages + mocks register themselves (`*.route.tsx`, `*.handlers.ts`). Next:
+  progress-per-person (approved, `chore/progress-per-person`), then the kickoff branch
+  `chore/kickoff-2026-11-08` (F03–F05, @x-dev).
 
 ### Known issues
 

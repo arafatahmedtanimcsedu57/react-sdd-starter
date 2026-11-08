@@ -61,14 +61,13 @@ The template ships **Tailwind CSS 4** and **no UI library** (see `architecture.m
 
 Ask first (default **yes, remove it**). If yes:
 
-- Delete `src/features/items/`, `src/routes/ItemsPage.tsx`, `src/routes/ItemsPage.test.tsx`.
-- Add `src/routes/HomePage.tsx` (a `<main>` with an `<h1>` of the project name) and point the
-  index route in `src/routes/routes.tsx` at it (keep it lazy). Update the first test in
-  `src/routes/routes.test.tsx` to expect that heading. Leave `RootLayout`, `RouteError`,
-  `RouteLoading` and `src/App.tsx` as they are.
-- `src/mocks/handlers.ts` → `export const handlers = []` plus an exported no-op
-  `resetMockData()` (the test setup calls it); keep the comment about parsing fixtures
-  through the Zod schema.
+- Delete `src/features/items/`, `src/routes/ItemsPage.tsx`, `src/routes/ItemsPage.test.tsx`,
+  `src/routes/items.route.tsx` and `src/mocks/items.handlers.ts`. Don't edit
+  `src/routes/routes.tsx` or `src/mocks/handlers.ts`: they collect whatever files exist.
+- Add `src/routes/HomePage.tsx` (a `<main>` with an `<h1>` of the project name) and
+  `src/routes/home.route.tsx` (`export const route = { index: true, lazy: … HomePage }`,
+  like the items one). Update the first test in `src/routes/routes.test.tsx` to expect that
+  heading. Leave `RootLayout`, `RouteError`, `RouteLoading` and `src/App.tsx` as they are.
 - `src/stores/useUiStore.ts` → reset to an empty example store (keep the file; the test
   setup resets it between tests).
 - `e2e/smoke.spec.ts` → assert the placeholder heading renders; keep the axe test.

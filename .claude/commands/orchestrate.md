@@ -21,10 +21,10 @@ can't move until they do).
   `features.md`. Read its `features.md` entry, `architecture.md` and design links.
 - Propose tasks: readable title, kebab id (= change name), one-line goal, paths,
   dependsOn, size (each ≤400 reviewable lines). **Paths** are the task's folders (with
-  their colocated tests) plus the exact shared files it must register in
-  (`src/mocks/handlers.ts`, `src/routes/routes.tsx`, `src/services/api.ts`,
-  `e2e/<feature>.spec.ts`) — a worker may touch nothing else. Tasks sharing such a file run
-  one after the other; say so.
+  their colocated tests) plus its own registration files — `src/routes/<name>.route.tsx`,
+  `src/mocks/<feature>.handlers.ts`, `e2e/<feature>.spec.ts` (routes and mocks register
+  themselves; nobody edits `routes.tsx` / `handlers.ts`) — a worker may touch nothing else.
+  Tasks sharing a file (e.g. one e2e spec) run one after the other; say so.
 - The **first** task is "contract + kickoff": Zod schema + MSW mock (`--contract`), plus
   `features add/start` (`--first`). Every other task of the feature depends on it.
 - On the owner's OK: `npm run board -- add <id> --title … --feature F0n --folders … [--depends …] [--contract] [--first]`.

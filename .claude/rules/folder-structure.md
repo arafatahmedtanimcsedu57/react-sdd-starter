@@ -14,7 +14,7 @@ src/
 ├── main.tsx              # entry — wraps <App/> in <Provider store={store}>
 ├── App.tsx               # app shell — mounts the router
 ├── store.ts              # RTK Query store (configureStore)
-├── routes/               # routes.tsx (the route table) + one page component per route,
+├── routes/               # one page + one <name>.route.tsx per route (routes.tsx collects them),
 │                         #   RootLayout, RouteError (error boundary + 404), RouteLoading
 ├── features/             # feature-scoped code — one folder per domain
 │   └── <feature>/
@@ -49,7 +49,10 @@ Placement rules:
   `src/features/<domain>/api.ts`.
 - Reusable UI → `src/components/` (`components/ui/` for primitives); pages → `src/routes/`.
 - Tests are colocated next to the file they test; only Playwright specs live in `e2e/`.
-- New page → `src/routes/<Name>Page.tsx` + one entry in `src/routes/routes.tsx` (lazy-loaded).
+- New page → `src/routes/<Name>Page.tsx` + `src/routes/<name>.route.tsx` exporting `route`
+  (lazy-loaded). Never edit `routes.tsx`: it collects every `*.route.tsx`.
+- New mocks → `src/mocks/<feature>.handlers.ts` exporting `handlers` (+ `reset()` if it
+  keeps state). Never edit `mocks/handlers.ts`: it collects every `*.handlers.ts`.
 - New env variable → `src/lib/env.ts` (Zod) + `src/vite-env.d.ts` + `.env.example`. Never
   read `import.meta.env` anywhere else.
 - Import direction is enforced by ESLint: `lib/` + `types/` import no app layer;

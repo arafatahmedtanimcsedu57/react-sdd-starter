@@ -6,19 +6,20 @@ who made it and when, so a later reader knows it was deliberate.
 
 ## Decisions
 
-| Area                         | Decision                                       | Decided by / date |
-| ---------------------------- | ---------------------------------------------- | ----------------- |
-| Framework                    | Vite 8 + React 19 + TypeScript 6 (strict)      | starter default   |
-| Styling                      | Tailwind CSS 4                                 | starter default   |
-| UI component library         | None yet — hand-built components               | starter default   |
-| Server state / data fetching | RTK Query (fixed rule, see CLAUDE.md)          | starter default   |
-| Client / UI state            | Zustand (fixed rule)                           | starter default   |
-| Forms + validation           | React Hook Form + Zod (fixed rule)             | starter default   |
-| Routing                      | React Router 8, lazy route per page            | starter default   |
-| Config / env                 | `VITE_*` validated by Zod in `src/lib/env.ts`  | starter default   |
-| Auth transport               | Bearer token, held in memory (Zustand)         | starter default   |
-| Quality floors               | Coverage ≥80% lines; ≤180 kB gzip per JS chunk | starter default   |
-| Error tracking               | Sentry, lazy-loaded, on only when DSN is set   | starter default   |
+| Area                         | Decision                                                     | Decided by / date                   |
+| ---------------------------- | ------------------------------------------------------------ | ----------------------------------- |
+| Framework                    | Vite 8 + React 19 + TypeScript 6 (strict)                    | starter default                     |
+| Styling                      | Tailwind CSS 4                                               | starter default                     |
+| UI component library         | None yet — hand-built components                             | starter default                     |
+| Server state / data fetching | RTK Query (fixed rule, see CLAUDE.md)                        | starter default                     |
+| Client / UI state            | Zustand (fixed rule)                                         | starter default                     |
+| Forms + validation           | React Hook Form + Zod (fixed rule)                           | starter default                     |
+| Routing                      | React Router 8, lazy route per page                          | starter default                     |
+| Registration                 | Pages + mocks self-register (`*.route.tsx`, `*.handlers.ts`) | arafatahmedtanimcsedu57, 2026-11-08 |
+| Config / env                 | `VITE_*` validated by Zod in `src/lib/env.ts`                | starter default                     |
+| Auth transport               | Bearer token, held in memory (Zustand)                       | starter default                     |
+| Quality floors               | Coverage ≥80% lines; ≤180 kB gzip per JS chunk               | starter default                     |
+| Error tracking               | Sentry, lazy-loaded, on only when DSN is set                 | starter default                     |
 
 Replace "starter default" with a name and date when your team confirms or changes a row.
 

@@ -111,13 +111,13 @@ read and review the code:
 
 | I want to add…              | It goes in                                                        |
 | --------------------------- | ----------------------------------------------------------------- |
-| A page                      | `src/routes/<Name>Page.tsx` + one line in `src/routes/routes.tsx` |
+| A page                      | `src/routes/<Name>Page.tsx` + `src/routes/<name>.route.tsx`       |
 | A feature's UI, API, schema | `src/features/<domain>/` (`components/`, `api.ts`, `schema.ts`)   |
 | A shared component          | `src/components/` (design-system primitives in `components/ui/`)  |
 | A pure helper               | `src/lib/`                                                        |
 | A shared hook               | `src/hooks/`                                                      |
 | Global client state         | `src/stores/` (Zustand)                                           |
-| A mock API response         | `src/mocks/handlers.ts`                                           |
+| A mock API response         | `src/mocks/<feature>.handlers.ts`                                 |
 | An env variable             | `src/lib/env.ts` + `src/vite-env.d.ts` + `.env.example`           |
 | Colours, fonts, radii       | the `@theme` block in `src/styles/index.css` (from Claude Design) |
 
