@@ -23,19 +23,30 @@ if (process.argv.includes('migrate')) {
     console.log(`✓ ${PROGRESS} has no per-person sections; nothing to move.`)
     process.exit(0)
   }
-  mkdirSync(path('progress'), { recursive: true })
-  for (const { name, body } of sections) {
+  // Plan every move first, so a problem stops it before anything is written.
+  const plan = sections.map(({ name, body }) => {
     // An email heading moves to the login file when that person has joined.
     const github = name.startsWith('@') ? name.slice(1) : loginFor(team, name)
-    const file = progressFile({ email: name, github })
-    if (existsSync(path(file)))
-      fail(`${file} already exists; merge ${name}'s section into it by hand.`)
+    return { name, body, github, file: progressFile({ email: name, github }) }
+  })
+  const twice = plan.find((p, i) => plan.findIndex((q) => q.file === p.file) !== i)
+  if (twice) fail(`Two sections map to ${twice.file}. Merge them into one section first.`)
+  mkdirSync(path('progress'), { recursive: true })
+  const kept = []
+  for (const { name, body, github, file } of plan) {
+    if (existsSync(path(file))) {
+      console.warn(
+        `⚠ ${name}: ${file} already exists — merge the section into it by hand, then delete it here.`,
+      )
+      kept.push(`## ${name}\n\n${body.trimEnd()}`)
+      continue
+    }
     // Section headings were ### inside PROGRESS.md; a file of its own uses ##.
     const title = github ? `@${github}` : name
     writeFileSync(path(file), `# Progress — ${title}\n\n${body.replace(/^### /gm, '## ')}`)
     console.log(`✓ ${name} → ${file}`)
   }
-  writeFileSync(path(PROGRESS), shared)
+  writeFileSync(path(PROGRESS), [shared.trimEnd(), ...kept].join('\n\n').concat('\n'))
   console.log(`✓ ${PROGRESS} keeps the shared part. Commit both in one PR.`)
   process.exit(0)
 }

@@ -106,17 +106,26 @@ switch (command) {
     // Your handoff file, which only you edit: progress/<login>.md (renamed from the email one).
     const mineFile = progressFile({ email, github: login })
     const emailFile = progressFile({ email })
-    if (!existsSync(path(mineFile))) {
+    let handoff = mineFile
+    if (existsSync(path(mineFile)) && existsSync(path(emailFile)) && emailFile !== mineFile) {
+      console.warn(
+        `⚠ both ${emailFile} and ${mineFile} exist: merge the first into the second, then delete it.`,
+      )
+    } else if (!existsSync(path(mineFile))) {
       mkdirSync(path('progress'), { recursive: true })
-      if (existsSync(path(emailFile))) renameSync(path(emailFile), path(mineFile))
-      else {
+      if (existsSync(path(emailFile))) {
+        renameSync(path(emailFile), path(mineFile))
+        handoff = `${mineFile} (renamed from ${emailFile}: commit both sides)`
+      } else {
         const template = path('progress/_template.md')
         const text = existsSync(template)
-          ? readFileSync(template, 'utf8').replace(/^# Progress — .*$/m, `# Progress — @${login}`)
+          ? readFileSync(template, 'utf8')
+              .replace(/^# Progress — .*$/m, `# Progress — @${login}`)
+              .replace(/<!--[\s\S]*?-->\n*/g, '')
           : `# Progress — @${login}\n\n## Current work\n\n## Known issues\n\n## Next step\n`
         writeFileSync(path(mineFile), text)
       }
-      console.log(`✓ your handoff file: ${mineFile}`)
+      console.log(`✓ your handoff file: ${handoff}`)
     }
     const ready = spawnSync(process.execPath, [path('scripts/harness/ready.mjs')], {
       encoding: 'utf8',
@@ -131,7 +140,7 @@ switch (command) {
     const mine = featuresOf({ github: login, email }).filter((f) => f.state !== 'passing')
     console.log(
       mine.length
-        ? `Your features: ${mine.map((f) => `${f.id} ${f.title}`).join(', ')}\nNext: commit team.json, the ledger and ${mineFile} in a PR and get it merged — until then only branches made from this one know it's you (and /orchestrate's workers start from master). Then /orchestrate ${mine[0].id}`
+        ? `Your features: ${mine.map((f) => `${f.id} ${f.title}`).join(', ')}\nNext: commit team.json, the ledger and ${handoff} in a PR and get it merged — until then only branches made from this one know it's you (and /orchestrate's workers start from master). Then /orchestrate ${mine[0].id}`
         : 'No open features for you yet. Next: commit team.json in a PR; the lead assigns work with /kickoff.',
     )
     break

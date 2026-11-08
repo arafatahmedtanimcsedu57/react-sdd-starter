@@ -1,7 +1,9 @@
 # Progress — @your-login
 
 Your handoff note between sessions. Only you edit this file, so it never conflicts.
-Copy it to `progress/<your-login>.md` (or `progress/<your-email>.md` before you join).
+
+<!-- Template: `npm run team -- join` copies it to progress/<your-login>.md. Before you
+join, copy it to progress/<your-email>.md yourself. -->
 
 ## Current work
 

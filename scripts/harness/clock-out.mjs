@@ -4,7 +4,7 @@
 //   npm run clock-out -- --fix   first delete untracked junk files (*.log, debug-*, *.orig …)
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, unlinkSync } from 'node:fs'
-import { findJunk, progressFile, progressProblem, progressText } from './lib.mjs'
+import { checkProgressFile, findJunk, progressFile, progressProblem, progressText } from './lib.mjs'
 import { appendTrace, changedFiles, DEFAULT_BRANCH, forkPoint, git, path, whoami } from './io.mjs'
 
 const fix = process.argv.includes('--fix')
@@ -33,7 +33,10 @@ const branch = git('rev-parse', '--abbrev-ref', 'HEAD')
 const onDefault = DEFAULT_BRANCH.test(branch)
 const changed = changedFiles()
 // Your handoff file: progress/<login>.md once you've joined, else progress/<email>.md.
-const file = progressFile(whoami())
+const me = whoami()
+const file = progressFile(me)
+// Joined, but this branch still has the file under your email (made before your join).
+const emailFile = me.github ? progressFile({ email: me.email }) : null
 
 const checks = [
   [
@@ -68,6 +71,14 @@ const checks = [
   [
     'your handoff file saved',
     () => {
+      if (file && !existsSync(path(file)) && emailFile && existsSync(path(emailFile))) {
+        return `Your handoff file is still named by email.\nFIX: git mv ${emailFile} ${file}`
+      }
+      if (file && existsSync(path(file))) {
+        const missing = checkProgressFile(readFileSync(path(file), 'utf8'))
+        if (missing.length)
+          return `${file} has no ${missing.map((h) => `"## ${h}"`).join(', ')}.\nFIX: add them back (progress/_template.md).`
+      }
       const before = onDefault || !file ? '' : git('show', `${forkPoint()}:${file}`)
       return progressProblem({
         changed,

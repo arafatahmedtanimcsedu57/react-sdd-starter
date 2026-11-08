@@ -3,6 +3,7 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -82,5 +83,14 @@ describe('npm run team', () => {
     expect(readFileSync(join(dir, '.github/CODEOWNERS'), 'utf8')).toBe(
       '# owners\n*  @ana-dev @bo\n/openspec/  @ana-dev @bo\n',
     )
+  })
+
+  it('renames a handoff file written under the email when that member joins', () => {
+    mkdirSync(join(dir, 'progress'), { recursive: true })
+    writeFileSync(join(dir, 'progress/bo@x.io.md'), '# Progress — bo@x.io\n\n- notes\n')
+    const run = team(['join'], 'bo', 'bo@x.io')
+    expect(run.stdout).toMatch(/progress\/bo.md \(renamed from progress\/bo@x.io.md/)
+    expect(readFileSync(join(dir, 'progress/bo.md'), 'utf8')).toMatch(/- notes/)
+    expect(existsSync(join(dir, 'progress/bo@x.io.md'))).toBe(false)
   })
 })

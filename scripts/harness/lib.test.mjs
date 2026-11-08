@@ -5,12 +5,12 @@ import {
   changesTouched,
   checkInstructions,
   checkProgressDoc,
+  checkProgressFile,
   findLedgerAnomalies,
   findLedgerDrift,
   findJunk,
   findOutOfScope,
   formatTrace,
-  ownSection,
   parseTraceLines,
   progressFile,
   progressProblem,
@@ -478,24 +478,6 @@ describe('checkInstructions', () => {
   })
 })
 
-describe('ownSection', () => {
-  const doc =
-    '# Progress\n\n## Team-wide\n- a\n\n## me@example.com\n\n### Next step\n\n- do x\n\n## x@example.com\n- y\n'
-
-  it("returns only that developer's section, whitespace-normalised", () => {
-    expect(ownSection(doc, 'me@example.com')).toBe('### Next step - do x')
-    expect(ownSection(doc, 'x@example.com')).toBe('- y')
-  })
-
-  it('matches the heading whatever the case of the email', () => {
-    expect(ownSection('## Me@Example.com\n- a\n', 'me@example.com')).toBe('- a')
-  })
-
-  it('is null for a developer without a section', () => {
-    expect(ownSection(doc, 'new@example.com')).toBeNull()
-  })
-})
-
 describe('progressFile / splitProgress', () => {
   it('names your file by login once joined, else by email', () => {
     expect(progressFile({ email: 'Me@X.io', github: 'Ana-Dev' })).toBe('progress/ana-dev.md')
@@ -512,6 +494,27 @@ describe('progressFile / splitProgress', () => {
         { name: 'me@x.io', body: '### Next step\n\n- x\n' },
         { name: '@bo', body: '- y\n' },
       ],
+    })
+  })
+})
+
+describe('progress edge cases', () => {
+  it('a handoff file must keep its three headings', () => {
+    expect(checkProgressFile('# P\n## Current work\n## Known issues\n## Next step\n')).toEqual([])
+    expect(checkProgressFile('# P\n### Current work\n')).toEqual(['Known issues', 'Next step'])
+  })
+
+  it('ignores person-like headings inside code fences', () => {
+    const doc = '# P\n```md\n## you@example.com\n```\n'
+    expect(checkProgressDoc(doc)).toEqual([])
+    expect(splitProgress(doc).sections).toEqual([])
+  })
+
+  it('ends a section at a rule or a top heading, so a footer stays shared', () => {
+    const doc = '# P\n\n## ann@x.io\n- a\n\n---\n\nFooter\n'
+    expect(splitProgress(doc)).toEqual({
+      shared: '# P\n\n---\n\nFooter\n',
+      sections: [{ name: 'ann@x.io', body: '- a\n' }],
     })
   })
 })

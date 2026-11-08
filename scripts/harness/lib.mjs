@@ -505,7 +505,9 @@ const OLD_MARKERS = /<!-- harness:auto:(start|end) -->/
 
 // A `## @login` / `## <email>` heading: a per-person section, which now lives in its own
 // file (two people adding theirs the same day always conflicted at the end of PROGRESS.md).
-const PERSON_HEADING = /^## (@[A-Za-z\d-]+|[^@\s]+@[^@\s]+)\s*$/gm
+const PERSON_HEADING = /^## (@[A-Za-z\d-]+|[^@\s]+@[^@\s]+)\s*$/
+// Fenced code blocks (``` … ```) are examples, never someone's section.
+const withoutFences = (text) => String(text).replace(/^```[\s\S]*?^```.*$/gm, '')
 
 export function checkProgressDoc(text) {
   const problems = OLD_MARKERS.test(text)
@@ -513,7 +515,9 @@ export function checkProgressDoc(text) {
         'has the old generated block (harness:auto markers). Remove it; `npm run progress` prints it.',
       ]
     : []
-  const people = [...String(text).matchAll(PERSON_HEADING)].map((m) => m[1])
+  const people = withoutFences(text)
+    .split('\n')
+    .flatMap((line) => PERSON_HEADING.exec(line)?.slice(1, 2) ?? [])
   if (people.length) {
     problems.push(
       `has per-person sections (${people.join(', ')}); each now lives in progress/<id>.md.\n  FIX: npm run progress -- migrate`,
@@ -529,6 +533,11 @@ export const progressFile = (me) => {
   return id ? `progress/${id.toLowerCase()}.md` : null
 }
 
+const HANDOFF_HEADINGS = ['Current work', 'Known issues', 'Next step']
+/** Headings a handoff file is missing (it must keep all three). */
+export const checkProgressFile = (text) =>
+  HANDOFF_HEADINGS.filter((h) => !new RegExp(`^#{2,3} ${h}\\s*$`, 'mi').test(String(text)))
+
 /** A handoff file's text, whitespace-normalised (what clock-out compares). */
 export const progressText = (text) => String(text).replace(/\s+/g, ' ').trim()
 
@@ -541,38 +550,24 @@ export function splitProgress(doc) {
   const shared = []
   const sections = []
   let current = null
+  let fenced = false
   for (const line of lines) {
-    const person = /^## (@[A-Za-z\d-]+|[^@\s]+@[^@\s]+)\s*$/.exec(line)
+    if (/^```/.test(line)) fenced = !fenced
+    const person = !fenced && PERSON_HEADING.exec(line)
     if (person) {
       current = { name: person[1], body: [] }
       sections.push(current)
-    } else if (/^## /.test(line)) {
-      current = null
-      shared.push(line)
-    } else if (current) current.body.push(line)
+      continue
+    }
+    // Another heading, or a `---` rule, ends a person's section: what follows is shared.
+    if (!fenced && (/^#{1,2} /.test(line) || /^---\s*$/.test(line))) current = null
+    if (current) current.body.push(line)
     else shared.push(line)
   }
   return {
     shared: `${shared.join('\n').trimEnd()}\n`,
     sections: sections.map((s) => ({ name: s.name, body: `${s.body.join('\n').trim()}\n` })),
   }
-}
-
-/**
- * One developer's hand-written part of PROGRESS.md: the `## <email>` or `## @login` section up to the next
- * `## ` heading, whitespace-normalised — or null when they have no section yet.
- */
-export function ownSection(doc, names) {
-  const lines = String(doc).split('\n')
-  const headings = [names]
-    .flat()
-    .filter(Boolean)
-    .map((n) => `## ${n}`.toLowerCase())
-  const start = lines.findIndex((l) => headings.includes(l.trim().toLowerCase()))
-  if (start === -1) return null
-  const rest = lines.slice(start + 1)
-  const end = rest.findIndex((l) => /^## /.test(l))
-  return (end === -1 ? rest : rest.slice(0, end)).join(' ').replace(/\s+/g, ' ').trim()
 }
 
 /**
