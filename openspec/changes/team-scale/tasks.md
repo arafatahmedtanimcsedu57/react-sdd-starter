@@ -8,6 +8,6 @@ Estimated reviewable lines: ~250 (tests excluded) — one PR.
 - [x] 1.6 `harness:check` fails on an incomplete CODEOWNERS (2+ members) + tests (S9)
 - [x] 1.7 `scripts/harness/team-sim.test.mjs`: the simulation as a regression test
 - [x] 1.8 `TEAM.md` (§3 leads, §7 roster conflicts), `DECISIONS.md`
-- [ ] 1.9 `npm run check` green; react-reviewer PASS; PR
+- [x] 1.9 `npm run check` green; react-reviewer PASS; PR
 
 approved: arafatahmedtanimcsedu57, 2026-11-08

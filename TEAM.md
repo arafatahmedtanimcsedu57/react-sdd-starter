@@ -50,7 +50,8 @@ claude                                  # then: /orchestrate
 - Someone left or is away: a **lead** hands over any unfinished feature with `npm run
 features -- owner F0n --set @login --reason "…"`. Then `npm run team -- remove @login`
   (refuses while they still own an unfinished feature) and `npm run team -- codeowners`.
-- Leads: the first member to join is the first lead; a lead runs `npm run team -- lead
+- Leads: the first member to join is the first lead — so the lead's join PR merges
+  first, teammates' after; a lead runs `npm run team -- lead
 @login [--remove]` (never the last one). Recorded in the ledger, like joins, so old
   hand-overs stay valid after a lead steps down; `npm run team` marks them.
 - `npm run progress` and `features check` warn when someone has more than

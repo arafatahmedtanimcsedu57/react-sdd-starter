@@ -154,9 +154,10 @@ function idsElsewhere() {
   if (fetched.status !== 0)
     console.warn('⚠ git fetch failed (offline?): using the refs already here')
   const where = new Map()
+  const current = git('symbolic-ref', '-q', 'HEAD') // its ids are the local list
   const refs = git('for-each-ref', '--format=%(refname)', 'refs/remotes', 'refs/heads')
   for (const ref of refs.split('\n')) {
-    if (!ref || ref.endsWith('/HEAD')) continue
+    if (!ref || ref.endsWith('/HEAD') || ref === current) continue
     const name = ref.replace(/^refs\/(remotes|heads)\//, '')
     try {
       for (const f of JSON.parse(git('show', `${ref}:features.json`) || '{}').features ?? []) {

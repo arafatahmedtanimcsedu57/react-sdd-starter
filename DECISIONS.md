@@ -28,6 +28,8 @@ Format:
   reviewer. Now: repeated moves are ignored, over-limit warns, leads (recorded in the
   ledger like joins, replayed per line; mirrored in `team.json`) hand over with `--reason`, `features add` picks an id free on every pushed branch, and
   `harness:check` fails on an incomplete CODEOWNERS. `team-sim.test.mjs` replays it.
+  A roster that already had several joins gets its earliest joiner as lead; correct it
+  with `npm run team -- lead @x` (and `--remove`).
 - Rejected: failing master when someone is over the limit — one overlap blocks every PR;
   a central id counter file — it conflicts exactly like `features.json`; union-merging
   `PROGRESS.md` — two edits to one line would both survive (per-person files: later);
