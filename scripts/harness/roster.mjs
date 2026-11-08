@@ -4,10 +4,11 @@
 //   npm run team                    members, joined or not, and the features each owns
 //   npm run team -- add @login      (lead) add a member
 //   npm run team -- join            (each member, once) link your GitHub login to your git email
+//   npm run team -- remove @login   (a lead) drop a member who owns no unfinished feature
 //   npm run team -- codeowners      rewrite .github/CODEOWNERS: every line → every member
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { isOwner, parseTeam, renderCodeowners } from './lib.mjs'
+import { isLead, isOwner, leadsOf, parseTeam, renderCodeowners } from './lib.mjs'
 import {
   appendLedger,
   fail,
@@ -18,6 +19,7 @@ import {
   readLedger,
   readTeam,
   TEAM,
+  whoami,
 } from './io.mjs'
 
 const [command = 'list', arg] = process.argv.slice(2)
@@ -49,7 +51,8 @@ switch (command) {
     for (const m of team.members) {
       const owned = featuresOf(m)
       const active = owned.filter((f) => f.state === 'active').length
-      const joined = m.email ? `joined as ${m.email}` : 'not joined yet (npm run team -- join)'
+      const lead = leadsOf(team).some((l) => l.toLowerCase() === m.github.toLowerCase())
+      const joined = `${lead ? 'lead, ' : ''}${m.email ? `joined as ${m.email}` : 'not joined yet (npm run team -- join)'}`
       const list = owned.map((f) => `${f.id} ${f.title} (${f.state.replace('_', ' ')})`).join(', ')
       console.log(
         `@${m.github}  ${joined}\n  ${owned.length} features, ${active} active${list ? `: ${list}` : ''}`,
@@ -105,9 +108,40 @@ switch (command) {
     const mine = featuresOf({ github: login, email }).filter((f) => f.state !== 'passing')
     console.log(
       mine.length
-        ? `Your features: ${mine.map((f) => `${f.id} ${f.title}`).join(', ')}\nNext: commit team.json in a PR, then /orchestrate ${mine[0].id}`
+        ? `Your features: ${mine.map((f) => `${f.id} ${f.title}`).join(', ')}\nNext: commit team.json + the ledger in a PR and get it merged — until then only branches made from this one know it's you (and /orchestrate's workers start from master). Then /orchestrate ${mine[0].id}`
         : 'No open features for you yet. Next: commit team.json in a PR; the lead assigns work with /kickoff.',
     )
+    break
+  }
+  case 'remove': {
+    const login = arg?.replace(/^@/, '')
+    if (!login) fail('remove needs a GitHub login: npm run team -- remove @login')
+    if (!isLead(team, whoami(team)))
+      fail(
+        `Only a lead (${leadsOf(team)
+          .map((l) => `@${l}`)
+          .join(', ')}) removes members.`,
+      )
+    const member = team.members.find((m) => m.github.toLowerCase() === login.toLowerCase())
+    if (!member) fail(`@${login} is not on the team.`)
+    const open = featuresOf(member).filter((f) => f.state !== 'passing')
+    if (open.length) {
+      fail(
+        `@${login} still owns ${open.map((f) => f.id).join(', ')}. Hand each over first:\n  ` +
+          open
+            .map(
+              (f) => `npm run features -- owner ${f.id} --set @<login> --reason "@${login} left"`,
+            )
+            .join('\n  '),
+      )
+    }
+    const leads = team.leads?.filter((l) => l.toLowerCase() !== login.toLowerCase())
+    write({
+      ...team,
+      members: team.members.filter((m) => m !== member),
+      ...(team.leads ? { leads } : {}),
+    })
+    console.log(`✓ removed @${login}. Next: npm run team -- codeowners, then a PR.`)
     break
   }
   case 'codeowners': {
@@ -128,5 +162,5 @@ switch (command) {
     break
   }
   default:
-    fail(`Unknown command "${command}". Commands: list, add, join, codeowners.`)
+    fail(`Unknown command "${command}". Commands: list, add, join, remove, codeowners.`)
 }

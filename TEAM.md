@@ -47,6 +47,12 @@ claude                                  # then: /orchestrate
   each. An `@login` owner can do that only after `npm run team -- join`.
 - Hand a feature over: the current owner runs `npm run features -- owner F0n --set
 @login` (someone on `team.json`) and opens a PR.
+- Someone left or is away: a **lead** (`leads` in `team.json`; the first member if none
+  are named) hands over any unfinished feature with `npm run features -- owner F0n --set
+@login --reason "…"`. Then `npm run team -- remove @login` (refuses while they still own
+  an unfinished feature) and `npm run team -- codeowners`.
+- `npm run progress` and `features check` warn when someone has more than 2 active (two
+  branches each started one): block one.
 - `PROGRESS.md` has one section per developer, headed by `@login` or their email. Edit
   only yours.
 - `team.json` and the ledger's `join` lines decide who `@login` is. The harness can't
@@ -117,8 +123,12 @@ npm run team:check
 - `features.ledger.jsonl` and `DECISIONS.md` merge by union (`.gitattributes`). If GitHub
   still shows a conflict in them, run `git merge origin/master` locally (it applies the
   union) and push.
-- `features.json` conflicts only when two people add a feature at once: keep both entries.
+- `features.json` conflicts only when two people add a feature at once: keep both entries
+  (`features add` gives each a different id, also across pushed branches).
   If both changed the same feature's scope or owner, keep both in the file, then the owner
   re-runs `npm run features -- scope|owner …` so the ledger matches.
+- `team.json` / CODEOWNERS conflict (two people added a member): keep both members, then
+  `npm run team -- codeowners`. `harness:check` fails while a CODEOWNERS line misses one.
+- The same feature started on two branches is fine: the repeated move is ignored.
 - `npm run features -- check` rejects ledger lines the CLI wouldn't write (wrong state,
   no evidence, not the owner). Fix the cause; never hand-edit the ledger.

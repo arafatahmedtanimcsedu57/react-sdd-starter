@@ -59,9 +59,9 @@ conflict on it). Every entry in one has its ID in the other.
   a feature; each owner has at most `limits.activePerOwner` (2) active.
 - `npm run features -- verify <id>` runs `npm run check` + the proof command; only a pass
   moves it to `passing`. Every move is logged in `features.ledger.jsonl`.
-- New entry (after the human confirms it in `features.md`): `npm run features -- add --id
-F0n --title "…" --verify "<runnable command>" --scope <folders>`. The proof command
-  includes the feature's e2e spec when it has a user flow.
+- New entry (after the human confirms it in `features.md`): `npm run features -- add
+--title "…" --verify "<runnable command>" --scope <folders>` prints the next free id (also
+  free on pushed branches). The proof command includes the e2e spec for a user flow.
 - Need a folder outside the scope? Ask the human, then `npm run features -- scope <id>
 --add <folder>`.
 

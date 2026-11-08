@@ -35,7 +35,7 @@ settle). Don't answer them yourself.
 ## 2. Draft the features
 
 One entry per user-facing capability, in `features.md`'s template (Who / why, Behaviour,
-States, Edge cases, Open questions), with the next free ids (`F03`, `F04`, …). Anything the
+States, Edge cases, Open questions), with provisional ids (`F03`, `F04`, …; `add` assigns the real ones). Anything the
 input doesn't say goes under **Open questions** — never invented. Add **App shell / auth /
 API contract** as features of their own when the product needs them and they don't exist.
 
@@ -65,13 +65,14 @@ demo page never counts.
 
 ## 5. Write it (only after both approvals)
 
-1. `features.md`: the approved entries, each with its `**ID:**` and `**Status:** not
-started` (prose only — state lives in the ledger).
-2. `npm run team -- add @login` for each new member.
-3. For each feature: `npm run features -- add --id F0n --title "…" --owner @login --verify
-"<proof>" --scope src/features/<slug>[,…]`. Proof: `npx playwright test
+1. `npm run team -- add @login` for each new member.
+2. For each feature: `npm run features -- add --title "…" --owner @login --verify "<proof>"
+--scope src/features/<slug>[,…]` — no `--id`: it prints the next id free on master and
+   every pushed branch (the drafts' ids were provisional). Proof: `npx playwright test
 e2e/<slug>.spec.ts` for a user flow, else `npx vitest run src/features/<slug>`. Shared
    foundations scope what they really own, e.g. `src/routes,src/services`.
+3. `features.md`: each approved entry with the `**ID:**` that `add` printed and
+   `**Status:** not started` (prose only — state lives in the ledger).
 4. Two or more members → `npm run team -- codeowners`, and delete the template's
    `# TODO: replace with your teammate's GitHub username` line if it's still there.
 5. `PROGRESS.md`: an empty `## @login` section (Current work / Known issues / Next step)
