@@ -4,7 +4,7 @@ argument-hint: '[PRD path | demo URL | feature list]'
 ---
 
 You are helping the **lead** start (or extend) a team project. You draft; the lead decides.
-Design: `openspec/changes/team-kickoff/design.md`. Features go to people; each owner's
+Design: `openspec/changes/archive/2026-11-08-team-kickoff/design.md`. Features go to people; each owner's
 `/orchestrate` splits their feature into tasks later.
 
 **Clock in:** `npm run ready`, `npm run progress`, `npm run team`, `npm run features`. Work
