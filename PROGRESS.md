@@ -44,4 +44,3 @@ Things that affect everyone. Add, don't rewrite.
   them to `team.json` + CODEOWNERS); add them as a collaborator (TEAM.md §1); after that
   merges, turn on protection (§6) → `npm run team:check` green. Teammate: `npm run team --
 join`, then `/orchestrate <their feature>`.
-- `harness-clockout-trace` (shipped in #36) is still an open change: archive it next.
