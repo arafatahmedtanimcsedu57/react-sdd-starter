@@ -35,6 +35,16 @@ Format:
   `PROGRESS.md` — two edits to one line would both survive (per-person files: later);
   leads read from today's `team.json` — a departed lead's old hand-overs would fail master.
 
+## 2026-11-08: Pages and mocks register themselves
+
+- Why: every feature edited `src/routes/routes.tsx` and `src/mocks/handlers.ts`, so with a
+  team (or several `/orchestrate` workers) those were the files every branch conflicted on,
+  and tasks touching them had to run one after another. Now each page has
+  `src/routes/<name>.route.tsx` and each feature `src/mocks/<feature>.handlers.ts`;
+  `import.meta.glob` collects them. Same folders, pages still lazy; registry tests guard it.
+- Rejected: routes inside `src/features/<f>/` — `features/` may not import pages from
+  `routes/`; a generated registry file — it conflicts like the hand-written one.
+
 ## 2026-11-08: `/kickoff` + a team roster; owners may be a GitHub `@login`
 
 - Why: a lead has a PRD / demo / feature list and GitHub usernames, not teammates' git

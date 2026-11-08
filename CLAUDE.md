@@ -119,7 +119,7 @@ one-line rule for this file. Don't add it until they agree.
 
 ## Folder structure
 
-Fixed layout — `src/` holds `routes/` (pages + `routes.tsx`), `features/<domain>/`,
+Fixed layout — `src/` holds `routes/` (pages + `*.route.tsx`), `features/<domain>/`,
 `components/` (`ui/`), `hooks/`, `lib/`, `services/`, `mocks/`, `stores/`, `types/`,
 `styles/`, `test/`; Playwright specs live in `e2e/`. Never invent a new top-level folder or
 a parallel one that does the same job. The full tree and placement rules are in

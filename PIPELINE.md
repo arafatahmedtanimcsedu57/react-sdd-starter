@@ -62,7 +62,7 @@ The fixed folder structure (authoritative copy lives in `CLAUDE.md`):
 ├── e2e/                          # Playwright specs
 └── src/
     ├── main.tsx, App.tsx, store.ts
-    ├── routes/                   # routes.tsx (route table) + pages, error + loading screens
+    ├── routes/                   # pages + *.route.tsx (collected by routes.tsx), error + loading
     ├── features/<domain>/        # feature-scoped: components, api.ts, store.ts, schema.ts, types.ts
     ├── components/ (ui/)         # shared UI + colocated tests
     ├── lib/env.ts                # validated env (API URL, mocking)
