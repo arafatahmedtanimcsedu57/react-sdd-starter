@@ -1,0 +1,11 @@
+Estimated reviewable lines: ~200 — one PR, after #40 merges.
+
+- [ ] 1.1 `progressFile`, `checkProgressFile`; clock-out reads your file + tests
+- [ ] 1.2 `npm run progress` lists `progress/`; `-- migrate` + tests
+- [ ] 1.3 `harness:check` flags sections left in `PROGRESS.md`; `progress/` always in scope
+- [ ] 1.4 `team -- join` creates / renames your file; `/kickoff` writes new members' files + tests
+- [ ] 1.5 Migrate this repo's own `PROGRESS.md`; `progress/_template.md`
+- [ ] 1.6 `CLAUDE.md`, `TEAM.md`, `/orchestrate`, `DECISIONS.md`; team-sim S8 scenario
+- [ ] 1.7 `npm run check` green; react-reviewer PASS; PR
+
+approved: <pending>
