@@ -14,7 +14,7 @@ read branch protection). `/orchestrate` runs it at clock-in.
 GitHub usernames, and proposes who builds what (foundations first, related features
 together, balanced). Nothing is written until you approve the features and the split;
 then it writes `features.md`, `features.json` (owners as `@login`), `team.json`,
-CODEOWNERS and `PROGRESS.md` sections in one PR, and gives you a short message for each
+CODEOWNERS and a `progress/<login>.md` per member in one PR, and gives you a short message for each
 teammate. Run it again for a new PRD version or a new person — existing owners stay.
 `npm run team` shows the roster: who joined, and what each owns.
 
@@ -56,8 +56,8 @@ features -- owner F0n --set @login --reason "…"`. Then `npm run team -- remove
   hand-overs stay valid after a lead steps down; `npm run team` marks them.
 - `npm run progress` and `features check` warn when someone has more than
   `limits.activePerOwner` (2) active — two branches each started one: block one.
-- `PROGRESS.md` has one section per developer, headed by `@login` or their email. Edit
-  only yours.
+- Each developer has their own handoff file, `progress/<login>.md` (created by `npm run
+team -- join`); edit only yours, so it never conflicts. `PROGRESS.md` holds team-wide notes.
 - `team.json` and the ledger's `join` lines decide who `@login` is. The harness can't
   check identity: review a changed `team.json` like a changed CODEOWNERS.
 

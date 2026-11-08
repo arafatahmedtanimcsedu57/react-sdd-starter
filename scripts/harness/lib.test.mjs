@@ -5,14 +5,16 @@ import {
   changesTouched,
   checkInstructions,
   checkProgressDoc,
+  checkProgressFile,
   findLedgerAnomalies,
   findLedgerDrift,
   findJunk,
   findOutOfScope,
   formatTrace,
-  ownSection,
   parseTraceLines,
+  progressFile,
   progressProblem,
+  splitProgress,
   parseFeatureList,
   proposalFeature,
   renderProgress,
@@ -447,7 +449,13 @@ describe('renderProgress / checkProgressDoc', () => {
 
   it('flags the old generated block in PROGRESS.md', () => {
     expect(checkProgressDoc('<!-- harness:auto:start -->\nx')).toHaveLength(1)
-    expect(checkProgressDoc('## me@example.com\n- notes')).toEqual([])
+    expect(checkProgressDoc('## Team-wide known issues\n- a')).toEqual([])
+  })
+
+  it('flags per-person sections, which live in progress/<id>.md now', () => {
+    expect(checkProgressDoc('## me@example.com\n- notes\n## @bo\n')).toEqual([
+      expect.stringMatching(/per-person sections \(me@example.com, @bo\).*progress -- migrate/s),
+    ])
   })
 })
 
@@ -470,21 +478,44 @@ describe('checkInstructions', () => {
   })
 })
 
-describe('ownSection', () => {
-  const doc =
-    '# Progress\n\n## Team-wide\n- a\n\n## me@example.com\n\n### Next step\n\n- do x\n\n## x@example.com\n- y\n'
-
-  it("returns only that developer's section, whitespace-normalised", () => {
-    expect(ownSection(doc, 'me@example.com')).toBe('### Next step - do x')
-    expect(ownSection(doc, 'x@example.com')).toBe('- y')
+describe('progressFile / splitProgress', () => {
+  it('names your file by login once joined, else by email', () => {
+    expect(progressFile({ email: 'Me@X.io', github: 'Ana-Dev' })).toBe('progress/ana-dev.md')
+    expect(progressFile({ email: 'Me@X.io' })).toBe('progress/me@x.io.md')
+    expect(progressFile({})).toBeNull()
   })
 
-  it('matches the heading whatever the case of the email', () => {
-    expect(ownSection('## Me@Example.com\n- a\n', 'me@example.com')).toBe('- a')
+  it("splits PROGRESS.md into the shared part and each person's section", () => {
+    const doc =
+      '# Progress\n\nIntro\n\n## Team-wide\n- a\n\n## me@x.io\n\n### Next step\n\n- x\n\n## @bo\n- y\n'
+    expect(splitProgress(doc)).toEqual({
+      shared: '# Progress\n\nIntro\n\n## Team-wide\n- a\n',
+      sections: [
+        { name: 'me@x.io', body: '### Next step\n\n- x\n' },
+        { name: '@bo', body: '- y\n' },
+      ],
+    })
+  })
+})
+
+describe('progress edge cases', () => {
+  it('a handoff file must keep its three headings', () => {
+    expect(checkProgressFile('# P\n## Current work\n## Known issues\n## Next step\n')).toEqual([])
+    expect(checkProgressFile('# P\n### Current work\n')).toEqual(['Known issues', 'Next step'])
   })
 
-  it('is null for a developer without a section', () => {
-    expect(ownSection(doc, 'new@example.com')).toBeNull()
+  it('ignores person-like headings inside code fences', () => {
+    const doc = '# P\n```md\n## you@example.com\n```\n'
+    expect(checkProgressDoc(doc)).toEqual([])
+    expect(splitProgress(doc).sections).toEqual([])
+  })
+
+  it('ends a section at the next # / ## heading, not at a --- rule inside it', () => {
+    const doc = '# P\n\n## @bo\n### Current work\n---\n### Next step\n- b\n## Footer\nf\n'
+    expect(splitProgress(doc)).toEqual({
+      shared: '# P\n\n## Footer\nf\n',
+      sections: [{ name: '@bo', body: '### Current work\n---\n### Next step\n- b\n' }],
+    })
   })
 })
 
@@ -562,7 +593,7 @@ describe('progressProblem', () => {
     now: 'next: x',
     before: 'next: y',
     onDefault: false,
-    email: 'me@x.y',
+    file: 'progress/me@x.y.md',
   }
 
   it('passes when your section changed on a branch that changes files', () => {
@@ -571,18 +602,18 @@ describe('progressProblem', () => {
 
   it('fails when your section is the same as at the fork point', () => {
     expect(progressProblem({ ...base, now: 'same', before: 'same' })).toMatch(
-      /not your PROGRESS.md section/,
+      /not progress\/me@x.y.md/,
     )
   })
 
   it('fails when only PROGRESS.md changed but not your section', () => {
     const onlyProgress = { ...base, changed: ['PROGRESS.md'], now: 'same', before: 'same' }
-    expect(progressProblem(onlyProgress)).toMatch(/under "## me@x.y"/)
+    expect(progressProblem(onlyProgress)).toMatch(/update its Current work/)
   })
 
   it('fails without a section, and without a git email', () => {
-    expect(progressProblem({ ...base, now: null })).toMatch(/no section for you/)
-    expect(progressProblem({ ...base, email: '' })).toMatch(/user.email/)
+    expect(progressProblem({ ...base, now: null })).toMatch(/no handoff file.*_template.md/s)
+    expect(progressProblem({ ...base, file: null })).toMatch(/user.email/)
   })
 
   it('passes a section added on this branch, and anything when nothing changed', () => {

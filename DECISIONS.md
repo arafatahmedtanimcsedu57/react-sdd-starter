@@ -20,6 +20,17 @@ Format:
 
 ---
 
+## 2026-11-08: One handoff file per developer (`progress/<id>.md`)
+
+- Why: per-person sections in `PROGRESS.md` merged fine when edited, but every new section
+  was appended at the end, so two people adding theirs the same day conflicted (simulation
+  S8) — in the one file every session must update. Now each developer has
+  `progress/<login>.md` (`<email>` before joining; `join` creates or renames it);
+  `PROGRESS.md` keeps team-wide notes, and `harness:check` fails on a person section there.
+  `npm run progress -- migrate` moves old sections once.
+- Rejected: union-merging `PROGRESS.md` — two edits to one line would both survive;
+  sorted sections — neighbours still conflict; progress in the ledger — prose isn't a log.
+
 ## 2026-11-08: Team-scale rules, from a simulated 7-person team
 
 - Why: a scripted team (bare repo as GitHub, a clone per developer, CI-checked merges)

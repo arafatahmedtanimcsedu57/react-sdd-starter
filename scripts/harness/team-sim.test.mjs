@@ -250,4 +250,22 @@ describe('a team on the harness', { timeout: STEP }, () => {
     expect(r.ok).toBe(false)
     expect(r.out).toMatch(/\.github\/CODEOWNERS \* misses @cy @dee/)
   })
+
+  it('S8: two people joining the same day each get their own handoff file, no conflict', () => {
+    branch('ana', 'hire-eve-fay')
+    for (const who of ['@eve', '@fay']) as('ana', 'roster.mjs', 'add', who)
+    as('ana', 'roster.mjs', 'codeowners')
+    push('ana', 'hire eve and fay')
+    expect(mergePr('hire-eve-fay')).toBe('merged')
+    for (const who of ['eve', 'fay']) {
+      dev(who)
+      branch(who, `join-${who}`)
+      expect(as(who, 'roster.mjs', 'join').out).toMatch(`your handoff file: progress/${who}.md`)
+      push(who, `join ${who}`)
+    }
+    expect(mergePr('join-eve')).toBe('merged')
+    expect(mergePr('join-fay')).toBe('merged')
+    const files = git(clone('github'), 'ls-files', 'progress').trim().split('\n')
+    expect(files).toEqual(expect.arrayContaining(['progress/eve.md', 'progress/fay.md']))
+  })
 })

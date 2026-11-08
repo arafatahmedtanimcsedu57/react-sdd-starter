@@ -138,8 +138,8 @@ npm run check
 npm run features -- verify <id>   # check + the feature's proof command (with its e2e)
 ```
 
-Around every session: **clock in** (`npm run progress`, read `PROGRESS.md` +
-`DECISIONS.md`) and **clock out** (update your `PROGRESS.md` section, commit). Each feature has
+Around every session: **clock in** (`npm run progress`, read your `progress/<id>.md`,
+`PROGRESS.md` + `DECISIONS.md`) and **clock out** (update your `progress/<id>.md`, commit). Each feature has
 an owner; an owner has at most two active, and the Stop hook fails a turn that edits files
 outside the scope of the feature the branch builds.
 

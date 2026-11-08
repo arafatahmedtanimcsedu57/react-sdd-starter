@@ -503,44 +503,87 @@ export function renderProgress({ features, changes }) {
 // always conflicted there. It is printed now, and must not come back into the file.
 const OLD_MARKERS = /<!-- harness:auto:(start|end) -->/
 
+// A `## @login` / `## <email>` heading: a per-person section, which now lives in its own
+// file (two people adding theirs the same day always conflicted at the end of PROGRESS.md).
+const PERSON_HEADING = /^## (@[A-Za-z\d-]+|[^@\s]+@[^@\s]+)\s*$/
+// Fenced code blocks (``` … ```) are examples, never someone's section.
+const withoutFences = (text) => String(text).replace(/^```[\s\S]*?^```.*$/gm, '')
+
 export function checkProgressDoc(text) {
-  return OLD_MARKERS.test(text)
+  const problems = OLD_MARKERS.test(text)
     ? [
         'has the old generated block (harness:auto markers). Remove it; `npm run progress` prints it.',
       ]
     : []
+  const people = withoutFences(text)
+    .split('\n')
+    .flatMap((line) => PERSON_HEADING.exec(line)?.slice(1, 2) ?? [])
+  if (people.length) {
+    problems.push(
+      `has per-person sections (${people.join(', ')}); each now lives in progress/<id>.md.\n  FIX: npm run progress -- migrate (a section whose file already exists: merge it into that file by hand, then delete it here)`,
+    )
+  }
+  return problems
 }
 
+/** Your handoff file: `progress/<login>.md` once joined, else `progress/<email>.md`. */
+export const progressFile = (me) => {
+  const { email, github } = asMe(me)
+  const id = github || email
+  return id ? `progress/${id.toLowerCase()}.md` : null
+}
+
+const HANDOFF_HEADINGS = ['Current work', 'Known issues', 'Next step']
+/** Headings a handoff file is missing (it must keep all three). */
+export const checkProgressFile = (text) =>
+  HANDOFF_HEADINGS.filter((h) => !new RegExp(`^#{2,3} ${h}\\s*$`, 'mi').test(String(text)))
+
+/** A handoff file's text, whitespace-normalised (what clock-out compares). */
+export const progressText = (text) => String(text).replace(/\s+/g, ' ').trim()
+
 /**
- * One developer's hand-written part of PROGRESS.md: the `## <email>` or `## @login` section up to the next
- * `## ` heading, whitespace-normalised — or null when they have no section yet.
+ * PROGRESS.md split for `npm run progress -- migrate`: the shared part (everything that isn't
+ * a per-person section) and each `## @login` / `## <email>` section's name and body.
  */
-export function ownSection(doc, names) {
+export function splitProgress(doc) {
   const lines = String(doc).split('\n')
-  const headings = [names]
-    .flat()
-    .filter(Boolean)
-    .map((n) => `## ${n}`.toLowerCase())
-  const start = lines.findIndex((l) => headings.includes(l.trim().toLowerCase()))
-  if (start === -1) return null
-  const rest = lines.slice(start + 1)
-  const end = rest.findIndex((l) => /^## /.test(l))
-  return (end === -1 ? rest : rest.slice(0, end)).join(' ').replace(/\s+/g, ' ').trim()
+  const shared = []
+  const sections = []
+  let current = null
+  let fenced = false
+  for (const line of lines) {
+    if (/^```/.test(line)) fenced = !fenced
+    const person = !fenced && PERSON_HEADING.exec(line)
+    if (person) {
+      current = { name: person[1], body: [] }
+      sections.push(current)
+      continue
+    }
+    // Another `#` / `##` heading ends a person's section: what follows is shared. (A `---`
+    // rule doesn't — it may sit inside a section; migrate warns so the person checks.)
+    if (!fenced && /^#{1,2} /.test(line)) current = null
+    if (current) current.body.push(line)
+    else shared.push(line)
+  }
+  return {
+    shared: `${shared.join('\n').trimEnd()}\n`,
+    sections: sections.map((s) => ({ name: s.name, body: `${s.body.join('\n').trim()}\n` })),
+  }
 }
 
 /**
- * Clock-out's PROGRESS.md rule, or null when it holds. `now` / `before` are the caller's
- * section today and at the fork point (null = no section). Nothing changed → nothing to
+ * Clock-out's handoff rule, or null when it holds. `now` / `before` are the caller's
+ * `progress/<id>.md` today and at the fork point (null = no file). Nothing changed → nothing to
  * hand off; on the default branch only the commit check applies.
  */
-export function progressProblem({ changed, now, before, onDefault, email }) {
-  if (!email) return 'git has no user.email.\nFIX: git config user.email you@example.com'
+export function progressProblem({ changed, now, before, onDefault, file }) {
+  if (!file) return 'git has no user.email.\nFIX: git config user.email you@example.com'
   if (!changed.length) return null
   if (now === null) {
-    return `PROGRESS.md has no section for you.\nFIX: add "## ${email}" with Current work, Known issues, Next step.`
+    return `You have no handoff file.\nFIX: mkdir -p progress && cp progress/_template.md ${file}, then fill in Current work, Known issues, Next step.`
   }
   if (!onDefault && before !== null && before === now) {
-    return `This branch changes files but not your PROGRESS.md section.\nFIX: update Current work, Known issues and Next step under "## ${email}".`
+    return `This branch changes files but not ${file}.\nFIX: update its Current work, Known issues and Next step.`
   }
   return null
 }

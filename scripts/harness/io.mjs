@@ -34,6 +34,7 @@ export const ALWAYS_IN_SCOPE = [
   FEATURES,
   LEDGER,
   'PROGRESS.md',
+  'progress/',
   'DECISIONS.md',
   // The roster files /kickoff writes; reviewed like features.json, and drift-checked.
   TEAM,

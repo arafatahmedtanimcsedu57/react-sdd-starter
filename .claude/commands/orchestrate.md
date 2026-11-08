@@ -9,7 +9,7 @@ PRs. The owner talks only to you. Design: `openspec/changes/archive/2026-11-08-t
 
 **Clock in:** `npm run ready`, `npm run team:check` (misses → tell the owner once that Gate 2
 isn't enforced on GitHub yet, see `TEAM.md`; keep going), `git fetch`, `npm run progress`, `npm run board -- sync`,
-`npm run board`. Read the owner's `PROGRESS.md` section (`## @login` or `## <email>`). The
+`npm run board`. Read the owner's `progress/<login or email>.md`. The
 owner is `git config user.email`, or their `@login` once `team.json` links the two; their
 `approved:` lines carry the name they give you. `npm run team` shows them on the roster
 but not joined → have them run `npm run team -- join` first (features owned by `@login`
@@ -79,6 +79,6 @@ drafting/needs-you/coding/checking/blocked whose worker is gone:
 <worktree>`. If it refuses, stop and tell the owner — **never `--force`**.
 3. New worker, same brief plus "resume: `git switch <branch>` first".
 
-**Clock out:** update the owner's `PROGRESS.md` section with the board's open items.
+**Clock out:** update the owner's `progress/<id>.md` with the board's open items.
 Never merge, never write `approved:` without the owner's own words, never move another
 owner's feature.

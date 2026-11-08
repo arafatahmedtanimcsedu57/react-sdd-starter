@@ -1,13 +1,13 @@
 # Progress
 
-The handoff note between sessions. Treat every session as a new engineer with no memory:
-**clock in** with `npm run progress` (features by owner, open changes), then read **your**
-section below + `DECISIONS.md`; **clock out** by updating your section (see `CLAUDE.md` →
-Sessions).
+The team-wide part of the handoff note. Treat every session as a new engineer with no
+memory: **clock in** with `npm run progress` (features by owner, open changes), then read
+**your** file + this page + `DECISIONS.md`; **clock out** by updating your file (see
+`CLAUDE.md` → Sessions).
 
-One section per developer, headed by their `@login` or git email (`git config
-user.email`). Edit only your own: two developers editing different sections merge without
-conflicts.
+Each developer's own notes live in `progress/<login>.md` (or `progress/<email>.md` before
+`npm run team -- join`), from `progress/_template.md`. Only you edit yours, so they never
+conflict. A `## @login` / `## <email>` section here fails `harness:check`.
 
 ## Team-wide known issues
 
@@ -21,30 +21,3 @@ Things that affect everyone. Add, don't rewrite.
   already pins Node there).
 - Claude Code creates worker worktrees from `master`, not the current branch, so a harness
   fix reaches workers only after it is merged.
-
-## arafatahmedtanimcsedu57@gmail.com
-
-### Current work
-
-- team-kickoff shipped (#37 roster + `@login` owners, #38 `/kickoff`); archived to
-  `openspec/changes/archive/2026-11-08-team-kickoff/`. Not yet run for real with a teammate.
-- team-scale shipped (#40), CI fix (#41). `chore/self-registering` (Gate 1 approved):
-  pages + mocks register themselves (`*.route.tsx`, `*.handlers.ts`). Next:
-  progress-per-person (approved, `chore/progress-per-person`), then the kickoff branch
-  `chore/kickoff-2026-11-08` (F03–F05, @x-dev).
-
-### Known issues
-
-- **`master` is not protected** (`npm run team:check`: 9 of 10 rules missing). Until it is,
-  Gate 2 isn't enforced on GitHub. Order: add the teammate as a collaborator → add them to
-  every CODEOWNERS line and merge → run the command in `TEAM.md` §6.
-- `guard-bash.sh` still can't see a bare `git push` after `cd <other checkout> &&`;
-  branch protection is the backstop once it's on.
-- Not yet run for real: a full feature through `/orchestrate` (only the Gate 1 dry run).
-
-### Next step
-
-- Human: `/kickoff <PRD | demo URL | feature list>` with the teammate's GitHub name (adds
-  them to `team.json` + CODEOWNERS); add them as a collaborator (TEAM.md §1); after that
-  merges, turn on protection (§6) → `npm run team:check` green. Teammate: `npm run team --
-join`, then `/orchestrate <their feature>`.

@@ -39,13 +39,13 @@ translate them per the same file.
 Every session starts with no memory. The repo is the memory.
 
 - **Clock in:** `npm run ready` (right Node, deps installed), `npm run progress`, then read
-  your section of `PROGRESS.md` (headed by your `@login` or git email) and `DECISIONS.md`.
+  your file `progress/<login or email>.md`, `PROGRESS.md` (team-wide) and `DECISIONS.md`.
   Continue from "Next step"; don't re-decide anything `DECISIONS.md` settles without asking.
 - **While working:** a choice between real alternatives → one entry in `DECISIONS.md`
   (what, why, what you rejected).
 - **Clock out** (before you stop, even mid-change): `npm run check` green or its failure
-  written down; update your `PROGRESS.md` section → Current work, Known issues, Next step
-  (never another developer's); commit on the branch; then `npm run clock-out` must pass.
+  written down; update your `progress/<id>.md` → Current work, Known issues, Next step
+  (never another developer's file); commit on the branch; then `npm run clock-out` must pass.
 
 ## Feature list
 

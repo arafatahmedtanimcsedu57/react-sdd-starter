@@ -224,7 +224,7 @@ same checks.
 | --------------------- | ---------------------------------------------------------------------- |
 | `features.md`         | **You own it.** What the app does, in plain words                      |
 | `features.json`       | Machine copy: owner, proof command, scope (only `npm run features`)    |
-| `PROGRESS.md`         | Handoff note, one section per developer: where work stopped, what next |
+| `PROGRESS.md`         | Team-wide handoff notes; each developer's own in `progress/<login>.md` |
 | `DECISIONS.md`        | Why choices were made, so later sessions don't undo them               |
 | `scripts/harness/`    | The feature list, progress and scope scripts (+ their tests)           |
 | `architecture.md`     | **You own it.** Tech decisions, API sources, design links              |

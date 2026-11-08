@@ -1,20 +1,11 @@
 // The end of a session, checked instead of trusted: a working setup, no leftovers, your
-// PROGRESS.md section up to date, everything committed. It never edits code.
+// handoff file (progress/<id>.md) up to date, everything committed. It never edits code.
 //   npm run clock-out            check, exit 1 on any ✗
 //   npm run clock-out -- --fix   first delete untracked junk files (*.log, debug-*, *.orig …)
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, unlinkSync } from 'node:fs'
-import { findJunk, ownSection, progressProblem } from './lib.mjs'
-import {
-  appendTrace,
-  changedFiles,
-  DEFAULT_BRANCH,
-  forkPoint,
-  git,
-  path,
-  PROGRESS,
-  whoami,
-} from './io.mjs'
+import { checkProgressFile, findJunk, progressFile, progressProblem, progressText } from './lib.mjs'
+import { appendTrace, changedFiles, DEFAULT_BRANCH, forkPoint, git, path, whoami } from './io.mjs'
 
 const fix = process.argv.includes('--fix')
 const untracked = () =>
@@ -41,9 +32,11 @@ if (fix) {
 const branch = git('rev-parse', '--abbrev-ref', 'HEAD')
 const onDefault = DEFAULT_BRANCH.test(branch)
 const changed = changedFiles()
-const { email, github } = whoami()
-// Your PROGRESS.md section is headed by your @login (once joined) or your email.
-const names = [github && `@${github}`, email]
+// Your handoff file: progress/<login>.md once you've joined, else progress/<email>.md.
+const me = whoami()
+const file = progressFile(me)
+// Joined, but this branch still has the file under your email (made before your join).
+const emailFile = me.github ? progressFile({ email: me.email }) : null
 
 const checks = [
   [
@@ -76,16 +69,23 @@ const checks = [
     },
   ],
   [
-    'your PROGRESS.md section saved',
+    'your handoff file saved',
     () => {
-      if (!existsSync(path(PROGRESS))) return `${PROGRESS} is missing.`
-      const before = onDefault ? '' : git('show', `${forkPoint()}:${PROGRESS}`)
+      if (file && !existsSync(path(file)) && emailFile && existsSync(path(emailFile))) {
+        return `Your handoff file is still named by email.\nFIX: git mv ${emailFile} ${file}`
+      }
+      if (file && existsSync(path(file))) {
+        const missing = checkProgressFile(readFileSync(path(file), 'utf8'))
+        if (missing.length)
+          return `${file} has no ${missing.map((h) => `"## ${h}"`).join(', ')}.\nFIX: add them back (progress/_template.md).`
+      }
+      const before = onDefault || !file ? '' : git('show', `${forkPoint()}:${file}`)
       return progressProblem({
         changed,
-        now: ownSection(readFileSync(path(PROGRESS), 'utf8'), names),
-        before: before ? ownSection(before, names) : null,
+        now: file && existsSync(path(file)) ? progressText(readFileSync(path(file), 'utf8')) : null,
+        before: before ? progressText(before) : null,
         onDefault,
-        email: github ? `@${github}` : email,
+        file,
       })
     },
   ],
@@ -123,4 +123,4 @@ if (failed) {
   console.error(`\n✗ Not clean: ${failed} of ${checks.length}. Fix the ✗ lines, then run it again.`)
   process.exit(1)
 }
-console.log('\n✓ Clean desk: the next session can start from your PROGRESS.md section → Next step.')
+console.log(`\n✓ Clean desk: the next session can start from ${file} → Next step.`)
