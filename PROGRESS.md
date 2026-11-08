@@ -26,7 +26,9 @@ Things that affect everyone. Add, don't rewrite.
 ### Current work
 
 - `chore/team-kickoff` (Gate 1 approved), PR A of 2: team roster (`team.json`, `npm run
-team` add / join / codeowners), owners may be `@login`. PR B next: the `/kickoff` command.
+team` add / join / codeowners), owners may be `@login`. Reviewed PASS; not pushed yet.
+- `chore/team-kickoff-cmd` (stacked on PR A), PR B: `/kickoff` + docs; dry run done. Open
+  it only after PR A merges, then rebase onto `master` (the #24 lesson).
 
 ### Known issues
 

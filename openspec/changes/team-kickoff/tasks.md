@@ -12,10 +12,10 @@ check and review. Approving this file approves both.
 
 ## B. /kickoff
 
-- [ ] B.1 `.claude/commands/kickoff.md`: read input → draft features → team → proposed split → write → tell teammates
-- [ ] B.2 `.claude/commands/orchestrate.md`: owner may be `@login`; points new teammates to `npm run team -- join`
-- [ ] B.3 `CLAUDE.md` (eight commands; one-liners → `.claude/rules/commands.md`), `TEAM.md`, `README.md`, `DECISIONS.md`
-- [ ] B.4 Dry run on a throwaway branch: a short sample PRD → draft features + split shown, nothing written until approved; then clean up
+- [x] B.1 `.claude/commands/kickoff.md`: read input → draft features → team → proposed split → write → tell teammates
+- [x] B.2 `.claude/commands/orchestrate.md`: owner may be `@login`; points new teammates to `npm run team -- join`
+- [x] B.3 `CLAUDE.md` (eight commands; one-liners → `.claude/rules/commands.md`), `TEAM.md`, `README.md`, `DECISIONS.md`
+- [x] B.4 Dry run on a throwaway branch: a short sample PRD → draft features + split shown, nothing written until approved; then clean up
 - [ ] B.5 `npm run check` green; react-reviewer PASS; PR B
 
 approved: arafatahmedtanimcsedu57, 2026-11-08
