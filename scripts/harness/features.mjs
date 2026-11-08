@@ -14,8 +14,18 @@
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import { addFeature, findLedgerDrift, parseFeatureList, transition } from './lib.mjs'
-import { appendLedger, appendTrace, fail, git, me, path, readFeatures, writeList } from './io.mjs'
+import { addFeature, findLedgerDrift, isOwner, parseFeatureList, transition } from './lib.mjs'
+import {
+  appendLedger,
+  appendTrace,
+  fail,
+  git,
+  path,
+  readFeatures,
+  readTeam,
+  whoami,
+  writeList,
+} from './io.mjs'
 
 const MAX_ATTEMPTS = 3
 
@@ -36,22 +46,33 @@ const { positionals, values } = parseArgs({
 const [command = 'list', id] = positionals
 
 function assertNoDrift(list, ledger) {
-  const drift = findLedgerDrift(list, ledger)
+  const drift = findLedgerDrift(list, ledger, readTeam())
   if (drift.length) {
     fail(
-      `features.json was edited by hand:\n  ${drift.join('\n  ')}\n` +
-        'Only `npm run features` may change features. Restore the file with `git checkout features.json`.',
+      `features.json, team.json and the ledger disagree (a hand edit?):\n  ${drift.join('\n  ')}\n` +
+        'Only `npm run features` / `npm run team` may change them. Restore a hand-edited file with ' +
+        '`git checkout <file>`; a team.json email nobody recorded → that member runs `npm run team -- join`.',
     )
   }
 }
 
+// The caller as { email, github? }; the email is required (ledger lines record it).
+// An @login owner must be on the roster, or the feature is orphaned: nobody can move it.
+function knownOwner(owner) {
+  if (!owner.startsWith('@')) return owner
+  const login = owner.slice(1).toLowerCase()
+  return readTeam().members.some((m) => m.github.toLowerCase() === login)
+    ? owner
+    : fail(`${owner} is not on the team (team.json).\n  FIX: npm run team -- add ${owner}`)
+}
+
 function caller() {
-  return (
-    me() ||
-    fail(
-      'git has no user.email, so the harness cannot tell who you are.\n  FIX: git config user.email you@example.com',
-    )
-  )
+  const who = whoami()
+  return who.email
+    ? who
+    : fail(
+        'git has no user.email, so the harness cannot tell who you are.\n  FIX: git config user.email you@example.com',
+      )
 }
 
 function move(state, featureId, to, opts = {}) {
@@ -88,7 +109,7 @@ function verify(state, featureId) {
   if (feature.state !== 'active') {
     fail(`${featureId} is ${feature.state}. Start it first: npm run features -- start ${featureId}`)
   }
-  if (feature.owner !== caller()) {
+  if (!isOwner(feature.owner, caller())) {
     fail(`${featureId} belongs to ${feature.owner}; only its owner verifies it.`)
   }
   if (run('npm run check', featureId) && run(feature.verify, featureId)) {
@@ -143,7 +164,7 @@ function print(features) {
 function setDefinition(state, featureId, change, ledgerLine) {
   const current = state.list.features.find((f) => f.id === featureId)
   if (!current) fail(`${featureId} is not in features.json.`)
-  if (current.owner !== caller()) {
+  if (!isOwner(current.owner, caller())) {
     fail(
       `${featureId} belongs to ${current.owner}; only its owner changes its scope or owner. ` +
         'Ask them to run it.',
@@ -167,7 +188,7 @@ function setDefinition(state, featureId, change, ledgerLine) {
 function migrate() {
   const raw = JSON.parse(readFileSync(path('features.json'), 'utf8'))
   if (raw.version !== 1) fail(`features.json is already version ${raw.version}.`)
-  const owner = values.owner ?? caller()
+  const owner = knownOwner(values.owner ?? caller().email)
   let next
   try {
     next = parseFeatureList({
@@ -202,7 +223,7 @@ switch (command) {
   case 'add': {
     const { id: newId, title, verify: proof, scope, change } = values
     if (!newId || !title || !proof || !scope) fail('add needs --id, --title, --verify and --scope.')
-    const owner = values.owner ?? caller()
+    const owner = knownOwner(values.owner ?? caller().email)
     let next
     try {
       next = addFeature(state.list, {
@@ -250,7 +271,8 @@ switch (command) {
     break
   }
   case 'owner':
-    if (!values.set) fail('owner needs --set <email>.')
+    if (!values.set) fail('owner needs --set <@login|email>.')
+    knownOwner(values.set)
     setDefinition(state, id, { owner: values.set }, { event: 'owner', owner: values.set })
     console.log(`✓ ${id} now belongs to ${values.set}`)
     break

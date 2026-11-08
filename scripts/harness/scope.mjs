@@ -10,12 +10,13 @@ import {
   resolveChangeFeatures,
   scopeForBranch,
 } from './lib.mjs'
-import { ALWAYS_IN_SCOPE, changedFiles, fail, me, path, readFeatures } from './io.mjs'
+import { ALWAYS_IN_SCOPE, changedFiles, fail, path, readFeatures, whoami } from './io.mjs'
 
-const { list, ledger, features } = readFeatures()
+const { list, ledger, team, features } = readFeatures()
 // A hand-edited list (e.g. a widened scope) must not steer the check.
-const drift = findLedgerDrift(list, ledger)
-if (drift.length) fail(`features.json was edited by hand:\n  ${drift.join('\n  ')}`)
+const drift = findLedgerDrift(list, ledger, team)
+if (drift.length)
+  fail(`features.json, team.json and the ledger disagree (a hand edit?):\n  ${drift.join('\n  ')}`)
 
 const files = changedFiles()
 const proposals = changesTouched(files).map((name) => {
@@ -30,7 +31,7 @@ if (problems.length) {
   )
 }
 
-const target = scopeForBranch({ changeFeatures: named, features, me: me() })
+const target = scopeForBranch({ changeFeatures: named, features, me: whoami(team) })
 if (!target) {
   const why = notes.length ? `; ${notes.join('; ')}` : ''
   console.log(`scope: no feature for this branch (no change names one, none of yours active)${why}`)

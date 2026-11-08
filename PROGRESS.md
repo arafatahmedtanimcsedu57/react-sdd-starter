@@ -25,11 +25,8 @@ Things that affect everyone. Add, don't rewrite.
 
 ### Current work
 
-- `chore/harness-clockout-port` (Gate 1 approved): ports the stranded #24 — `npm run
-clock-out` and `npm run trace` — to the current harness (own PROGRESS section, traces
-  from all worktrees in the main checkout, clean default branch passes). With it, harness
-  gaps 1–4 are all done. `team-orchestration` shipped earlier (#30–#35).
-- `chore/harness-clockout-trace` (the stranded #24 work) can be deleted once this merges.
+- `chore/team-kickoff` (Gate 1 approved), PR A of 2: team roster (`team.json`, `npm run
+team` add / join / codeowners), owners may be `@login`. PR B next: the `/kickoff` command.
 
 ### Known issues
 

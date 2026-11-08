@@ -11,9 +11,9 @@ import {
   DEFAULT_BRANCH,
   forkPoint,
   git,
-  me,
   path,
   PROGRESS,
+  whoami,
 } from './io.mjs'
 
 const fix = process.argv.includes('--fix')
@@ -41,7 +41,9 @@ if (fix) {
 const branch = git('rev-parse', '--abbrev-ref', 'HEAD')
 const onDefault = DEFAULT_BRANCH.test(branch)
 const changed = changedFiles()
-const email = me()
+const { email, github } = whoami()
+// Your PROGRESS.md section is headed by your @login (once joined) or your email.
+const names = [github && `@${github}`, email]
 
 const checks = [
   [
@@ -80,10 +82,10 @@ const checks = [
       const before = onDefault ? '' : git('show', `${forkPoint()}:${PROGRESS}`)
       return progressProblem({
         changed,
-        now: ownSection(readFileSync(path(PROGRESS), 'utf8'), email),
-        before: before ? ownSection(before, email) : null,
+        now: ownSection(readFileSync(path(PROGRESS), 'utf8'), names),
+        before: before ? ownSection(before, names) : null,
         onDefault,
-        email,
+        email: github ? `@${github}` : email,
       })
     },
   ],

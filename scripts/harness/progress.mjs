@@ -18,8 +18,8 @@ function openChanges() {
     }))
 }
 
-const { list, ledger, features } = readFeatures()
-const drift = findLedgerDrift(list, ledger)
+const { list, ledger, team, features } = readFeatures()
+const drift = findLedgerDrift(list, ledger, team)
 if (drift.length) fail(`features.json and its ledger disagree:\n  ${drift.join('\n  ')}`)
 console.log(renderProgress({ features, changes: openChanges() }))
 console.log('\nThen read your section of PROGRESS.md, and DECISIONS.md.')
