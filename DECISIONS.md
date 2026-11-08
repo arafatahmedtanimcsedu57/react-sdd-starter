@@ -31,6 +31,10 @@ Format:
   ledger a migration; the lead typing teammates' emails — a wrong one silently hands a
   feature to someone else; folding into `/start` — it runs once, PRDs and people change;
   assigning tasks at kickoff — task-level owners don't exist.
+- `team.json` and `.github/CODEOWNERS` are always in scope (like `features.json`), so a
+  re-run of `/kickoff` while the lead has an active feature passes the scope check.
+  Rejected: skipping the scope check on `chore/kickoff-*` branches — a branch name would
+  switch off the whole check.
 - Limit: not authentication. A hand-written join line plus a matching `team.json` edit
   passes the checks; PR review of `team.json` + the ledger is the gate.
 

@@ -5,8 +5,9 @@ The handoff note between sessions. Treat every session as a new engineer with no
 section below + `DECISIONS.md`; **clock out** by updating your section (see `CLAUDE.md` →
 Sessions).
 
-One section per developer, headed by their git email (`git config user.email`). Edit only
-your own: two developers editing different sections merge without conflicts.
+One section per developer, headed by their `@login` or git email (`git config
+user.email`). Edit only your own: two developers editing different sections merge without
+conflicts.
 
 ## Team-wide known issues
 

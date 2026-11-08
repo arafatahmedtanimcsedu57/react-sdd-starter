@@ -17,9 +17,9 @@ Authoritative rules for this repo. Claude reads this every session — follow it
 - Dev: `npm run dev` · Build: `npm run build` · Format: `npm run format`
 - Typecheck: `npm run typecheck` · Lint: `npm run lint` · Doctor: `npm run doctor`
 - Test: `npm run test` · Coverage: `npm run test:coverage` · E2E: `npm run test:e2e`
-- Harness: `npm run ready` · `npm run features` · `npm run team` (roster) · `npm run
-progress` · `npm run scope` · `npm run harness:check` · `npm run clock-out` · `npm run
-trace` (what the hooks ran)
+- Harness: `npm run ready` · `npm run features` · `npm run team` (roster) ·
+  `npm run progress` · `npm run scope` · `npm run harness:check` · `npm run clock-out` ·
+  `npm run trace` (what the hooks ran)
 - All gates (definition of done): `npm run check`
 
 Hooks already run prettier + eslint + typecheck after every edit, and the scope check,

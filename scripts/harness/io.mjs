@@ -23,6 +23,7 @@ export function tracesDir() {
 
 export const FEATURES = 'features.json'
 export const LEDGER = 'features.ledger.jsonl'
+export const TEAM = 'team.json'
 
 // Bookkeeping any feature may touch, on top of its own scope.
 export const ALWAYS_IN_SCOPE = [
@@ -34,6 +35,9 @@ export const ALWAYS_IN_SCOPE = [
   LEDGER,
   'PROGRESS.md',
   'DECISIONS.md',
+  // The roster files /kickoff writes; reviewed like features.json, and drift-checked.
+  TEAM,
+  '.github/CODEOWNERS',
 ]
 
 export function git(...args) {
@@ -90,8 +94,6 @@ export function readLedger() {
 export function me() {
   return git('config', 'user.email')
 }
-
-export const TEAM = 'team.json'
 
 /** The roster (team.json); none yet → an empty one. */
 export function readTeam() {
