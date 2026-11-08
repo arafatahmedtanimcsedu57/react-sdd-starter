@@ -2,9 +2,10 @@
 
 ## Current work
 
-- Shipped: team-scale (#40), CI fix (#41), self-registering pages + mocks (#42).
-  `chore/progress-per-person` (Gate 1 approved, review PASS): one handoff file per person —
-  this file is its first. Then the kickoff branch `chore/kickoff-2026-11-08` (F03–F05, @x-dev).
+- Shipped + archived: team-scale (#40), self-registering pages + mocks (#42), one handoff
+  file per person (#43); CI fix (#41), autopilot prompt (#44).
+- Kickoff PR #45 (F03–F05) is on hold: `@x-dev` is a real stranger's GitHub account
+  (Christian Mayer), not our teammate. Waiting for the teammate's real username.
 
 ## Known issues
 
@@ -17,7 +18,7 @@
 
 ## Next step
 
-- Human: merge the progress-per-person PR; decide whether autopilot.yml's prompt should
-  also read `progress/<id>.md` (a CI file); add @x-dev as a collaborator
-  (TEAM.md §1); after the kickoff PR merges, turn on protection (§6) → `npm run team:check`.
-- Me: rebase the kickoff branch on master (migrate its PROGRESS sections), open it.
+- Human: give the teammate's real GitHub username → I update #45 (team.json, CODEOWNERS,
+  F04/F05 owners, progress file). Then: add them as a collaborator (TEAM.md §1), merge #45,
+  turn on protection (§6).
+- Me: after #45 merges, `/orchestrate F03` — its contract task unblocks the teammate.
