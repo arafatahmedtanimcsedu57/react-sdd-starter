@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   findLedgerAnomalies,
   findLedgerDrift,
+  findOutOfScope,
   isOwner,
   loginFor,
   parseFeatureList,
@@ -13,6 +14,7 @@ import {
   scopeForBranch,
   transition,
 } from './lib.mjs'
+import { ALWAYS_IN_SCOPE } from './io.mjs'
 
 const team = parseTeam({
   version: 1,
@@ -157,5 +159,13 @@ describe('renderCodeowners', () => {
   it('keeps escaped spaces in patterns, and leaves deliberately unowned lines alone', () => {
     expect(renderCodeowners('docs\\ folder/ @a\n', ['p', 'q'])).toBe('docs\\ folder/ @p @q\n')
     expect(renderCodeowners('generated/ \nvendor/\n', ['p'])).toBe('generated/ \nvendor/\n')
+  })
+})
+
+describe('roster files', () => {
+  it('are in scope on any branch, so a /kickoff re-run passes with a feature active', () => {
+    expect(findOutOfScope(['team.json', '.github/CODEOWNERS'], ['src/x'], ALWAYS_IN_SCOPE)).toEqual(
+      [],
+    )
   })
 })

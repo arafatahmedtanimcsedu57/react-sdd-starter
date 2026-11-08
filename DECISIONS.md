@@ -20,6 +20,24 @@ Format:
 
 ---
 
+## 2026-11-08: `/kickoff` + a team roster; owners may be a GitHub `@login`
+
+- Why: a lead has a PRD / demo / feature list and GitHub usernames, not teammates' git
+  emails. `team.json` lists members by login; each member links their own email with
+  `npm run team -- join`, which is also logged in the ledger, so a hand-edited email is
+  drift. `/kickoff` drafts features and proposes a split (whole features per person); the
+  lead approves both before anything is written. Tasks stay with each owner's `/orchestrate`.
+- Rejected: GitHub login as the only identity — every command would need `gh` and the
+  ledger a migration; the lead typing teammates' emails — a wrong one silently hands a
+  feature to someone else; folding into `/start` — it runs once, PRDs and people change;
+  assigning tasks at kickoff — task-level owners don't exist.
+- `team.json` and `.github/CODEOWNERS` are always in scope (like `features.json`), so a
+  re-run of `/kickoff` while the lead has an active feature passes the scope check.
+  Rejected: skipping the scope check on `chore/kickoff-*` branches — a branch name would
+  switch off the whole check.
+- Limit: not authentication. A hand-written join line plus a matching `team.json` edit
+  passes the checks; PR review of `team.json` + the ledger is the gate.
+
 ## 2026-11-08: Clock-out is a command and hook steps are traced (port of #24)
 
 - Why: "no junk, PROGRESS.md updated, committed" was prose and got skipped, and when a hook
