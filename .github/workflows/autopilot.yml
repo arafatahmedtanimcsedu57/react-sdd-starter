@@ -49,7 +49,8 @@ jobs:
             --disallowedTools "Bash(gh pr merge:*),Bash(gh api:*),Bash(git push --force:*),Bash(git push -f:*),Bash(npm install:*),Bash(npm i:*)"
           prompt: |
             Implement exactly ONE OpenSpec change. Never batch several changes into one PR.
-            Clock in first: `npm run progress`, then read PROGRESS.md and DECISIONS.md.
+            Clock in first: `npm run progress`, then read your progress/<login or email>.md
+            (the path it prints), PROGRESS.md and DECISIONS.md.
             Before coding run `npm run features -- start <id>` (the `Feature:` line in
             proposal.md); before the PR, `npm run features -- verify <id>` must pass.
             Requested change (may be empty): "${{ github.event.inputs.change }}"
