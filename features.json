@@ -17,6 +17,27 @@
       "owner": "arafatahmedtanimcsedu57@gmail.com",
       "verify": "npx vitest run src/routes/ItemsPage.test.tsx src/features/items && npx playwright test e2e/items.spec.ts e2e/smoke.spec.ts",
       "scope": ["src/features/items", "src/routes", "src/mocks", "src/stores"]
+    },
+    {
+      "id": "F03",
+      "title": "Sign in and registration",
+      "owner": "@arafatahmedtanimcsedu57",
+      "verify": "npx vitest run src/features/auth && npx playwright test e2e/auth.spec.ts",
+      "scope": ["src/features/auth", "src/routes", "src/stores", "src/services", "src/mocks"]
+    },
+    {
+      "id": "F04",
+      "title": "Dashboard",
+      "owner": "@x-dev",
+      "verify": "npx vitest run src/features/dashboard && npx playwright test e2e/dashboard.spec.ts",
+      "scope": ["src/features/dashboard", "src/routes", "src/mocks"]
+    },
+    {
+      "id": "F05",
+      "title": "Profile",
+      "owner": "@x-dev",
+      "verify": "npx vitest run src/features/profile && npx playwright test e2e/profile.spec.ts",
+      "scope": ["src/features/profile", "src/routes", "src/mocks"]
     }
   ]
 }
