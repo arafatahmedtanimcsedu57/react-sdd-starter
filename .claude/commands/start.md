@@ -65,12 +65,13 @@ Ask first (default **yes, remove it**). If yes:
   `src/routes/items.route.tsx` and `src/mocks/items.handlers.ts`. Don't edit
   `src/routes/routes.tsx` or `src/mocks/handlers.ts`: they collect whatever files exist.
 - Add `src/routes/HomePage.tsx` (a `<main>` with an `<h1>` of the project name) and
-  `src/routes/home.route.tsx` (`export const route = { index: true, lazy: … HomePage }`,
-  like the items one). Update the first test in `src/routes/routes.test.tsx` to expect that
+  `src/routes/home.route.tsx` (`export const route: RouteObject = { index: true, lazy: …
+HomePage }`, like the items one). Update the first test in `src/routes/routes.test.tsx` to expect that
   heading. Leave `RootLayout`, `RouteError`, `RouteLoading` and `src/App.tsx` as they are.
 - `src/stores/useUiStore.ts` → reset to an empty example store (keep the file; the test
   setup resets it between tests).
-- `e2e/smoke.spec.ts` → assert the placeholder heading renders; keep the axe test.
+- `e2e/smoke.spec.ts` → assert the placeholder heading renders; keep the axe test. Delete
+  `e2e/items.spec.ts`; in `e2e/app.spec.ts` expect the placeholder heading instead of "Items".
 - `features.md` → remove the Items entry; `architecture.md` → remove the `items` row from
   API contract.
 - Leave `src/lib/math.ts` (the unit-test example) unless the user asks.

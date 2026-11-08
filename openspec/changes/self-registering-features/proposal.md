@@ -39,6 +39,10 @@ Folder layout is unchanged — no new top-level folder; files stay in `src/route
   same pattern applies (`handle: { nav }` on each route). Left to `/start` / the project.
 - Contract or API changes: none.
 
+- **Removing the example's `F02` from `features.json`** in `/start` step 3 — there is no
+  `npm run features -- remove` yet, and `features.json` may only change through the CLI.
+  Gap from before this change; follow-up.
+
 ## Open questions
 
 1. **Where feature routes and mocks live** — suggested default: `src/routes/<name>.route.tsx`
