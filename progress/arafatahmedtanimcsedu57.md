@@ -4,8 +4,8 @@
 
 - Shipped + archived: team-scale (#40), self-registering pages + mocks (#42), one handoff
   file per person (#43); CI fix (#41), autopilot prompt (#44).
-- Kickoff PR #45 (F03–F05) is on hold: `@x-dev` is a real stranger's GitHub account
-  (Christian Mayer), not our teammate. Waiting for the teammate's real username.
+- The kickoff of F03–F05 with `x-dev` (#45) was a mock — closed, not for the template. The
+  team flow is exercised by `scripts/harness/team-sim.test.mjs` instead.
 
 ## Known issues
 
@@ -18,7 +18,7 @@
 
 ## Next step
 
-- Human: give the teammate's real GitHub username → I update #45 (team.json, CODEOWNERS,
-  F04/F05 owners, progress file). Then: add them as a collaborator (TEAM.md §1), merge #45,
-  turn on protection (§6).
-- Me: after #45 merges, `/orchestrate F03` — its contract task unblocks the teammate.
+- The template is ready for a real team: a project made from it runs `/start`, then
+  `/kickoff` with real GitHub usernames. Branch protection (TEAM.md §6) is per repo.
+- Possible follow-ups: `npm run features -- remove` (so `/start` can drop the example F02),
+  and a look at conflicts in shared files the simulation didn't cover.
