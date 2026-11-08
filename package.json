@@ -34,7 +34,7 @@
     "harness:check": "node scripts/harness/features.mjs check && node scripts/harness/instructions.mjs"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.9.1",
+    "@hookform/resolvers": "^7.0.3",
     "@reduxjs/toolkit": "^2.14.0",
     "@sentry/react": "^11.10.0",
     "react": "^19.3.1",
