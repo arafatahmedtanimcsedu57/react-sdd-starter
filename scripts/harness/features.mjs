@@ -3,18 +3,29 @@
 // developers' branches never conflict over it. Only a feature's owner moves it.
 //
 //   npm run features                       list features
-//   npm run features -- add --id F03 --title "…" --verify "npx vitest run …" --scope src/x,src/y [--owner a@b.c]
+//   npm run features -- add --title "…" --verify "npx vitest run …" --scope src/x,src/y [--owner @login] [--id F03]
 //   npm run features -- start F03          not_started|blocked → active (max limits.activePerOwner)
 //   npm run features -- block F03 --reason "…"
 //   npm run features -- verify F03         npm run check + the proof command → passing
 //   npm run features -- scope F03 --add src/z     widen a scope (ask a human first)
-//   npm run features -- owner F03 --set a@b.c     hand a feature over (ask a human first)
+//   npm run features -- owner F03 --set @login    hand a feature over (a lead: any unfinished one, with --reason)
 //   npm run features -- check              features.json, ledger and features.md agree
 //   npm run features -- migrate [--owner a@b.c]   one-time: v1 list (state inside) → v2
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import { addFeature, findLedgerDrift, isOwner, parseFeatureList, transition } from './lib.mjs'
+import {
+  addFeature,
+  findLedgerDrift,
+  isLead,
+  ledgerLeads,
+  isOwner,
+  nextId,
+  notOwnerMessage,
+  overLimit,
+  parseFeatureList,
+  transition,
+} from './lib.mjs'
 import {
   appendLedger,
   appendTrace,
@@ -131,8 +142,43 @@ function verify(state, featureId) {
   fail(`${featureId} did not pass (attempt ${attempts}/${MAX_ATTEMPTS}). ${hint}`)
 }
 
-function check({ list, ledger }) {
+// Ids on master and every pushed branch, so two people adding a feature the same day don't
+// both take the next one (and then "keep both" in the conflict). Offline → cached refs.
+function idsElsewhere() {
+  const fetched = spawnSync('git', ['fetch', '--quiet'], {
+    cwd: path('.'),
+    timeout: 10_000,
+    stdio: 'ignore',
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  })
+  if (fetched.status !== 0)
+    console.warn('⚠ git fetch failed (offline?): using the refs already here')
+  const where = new Map()
+  const current = git('symbolic-ref', '-q', 'HEAD') // its ids are the local list
+  const refs = git('for-each-ref', '--format=%(refname)', 'refs/remotes', 'refs/heads')
+  for (const ref of refs.split('\n')) {
+    if (!ref || ref.endsWith('/HEAD') || ref === current) continue
+    const name = ref.replace(/^refs\/(remotes|heads)\//, '')
+    try {
+      for (const f of JSON.parse(git('show', `${ref}:features.json`) || '{}').features ?? []) {
+        if (!where.has(f.id)) where.set(f.id, name)
+      }
+    } catch {
+      // not a v2 list on that branch: nothing to reserve
+    }
+  }
+  return where
+}
+
+function check({ list, ledger, features, team }) {
   assertNoDrift(list, ledger)
+  // A warning, not a failure: failing master would block everyone for one owner's overlap.
+  for (const o of overLimit(features, list.limits, team)) {
+    console.warn(
+      `⚠ ${o.owner} has ${o.ids.length} active (${o.ids.join(', ')}); the limit is ` +
+        `${list.limits.activePerOwner}. Block one: npm run features -- block <id> --reason "…"`,
+    )
+  }
   const prose = readFileSync(path('features.md'), 'utf8')
   const proseIds = new Set([...prose.matchAll(/\*\*ID:\*\*\s*(F\d+)/g)].map((m) => m[1]))
   const jsonIds = new Set(list.features.map((f) => f.id))
@@ -161,14 +207,17 @@ function print(features) {
 
 // Widening a scope or handing a feature over is the owner's call (after asking a human);
 // otherwise anyone could take a feature and then move it.
-function setDefinition(state, featureId, change, ledgerLine) {
+function setDefinition(state, featureId, change, ledgerLine, { leadMay = false } = {}) {
   const current = state.list.features.find((f) => f.id === featureId)
   if (!current) fail(`${featureId} is not in features.json.`)
-  if (!isOwner(current.owner, caller())) {
-    fail(
-      `${featureId} belongs to ${current.owner}; only its owner changes its scope or owner. ` +
-        'Ask them to run it.',
-    )
+  const me = caller()
+  if (!isOwner(current.owner, me)) {
+    const lead = leadMay && isLead(ledgerLeads(state.ledger), me)
+    if (!lead) fail(notOwnerMessage(featureId, current.owner, me, 'changes its scope or owner'))
+    if (!values.reason) fail(`A lead handing over ${featureId} must say why: --reason "…"`)
+    if (state.features.find((f) => f.id === featureId).state === 'passing') {
+      fail(`${featureId} is passing (shipped); its history stays with ${current.owner}.`)
+    }
   }
   let next
   try {
@@ -221,8 +270,19 @@ switch (command) {
     print(state.features)
     break
   case 'add': {
-    const { id: newId, title, verify: proof, scope, change } = values
-    if (!newId || !title || !proof || !scope) fail('add needs --id, --title, --verify and --scope.')
+    const { title, verify: proof, scope, change } = values
+    if (!title || !proof || !scope) fail('add needs --title, --verify and --scope.')
+    const elsewhere = idsElsewhere()
+    if (
+      values.id &&
+      elsewhere.has(values.id) &&
+      !state.list.features.some((f) => f.id === values.id)
+    )
+      fail(
+        `${values.id} is already taken on ${elsewhere.get(values.id)}. Leave out --id to get the next free one.`,
+      )
+    const newId =
+      values.id ?? nextId([...state.list.features.map((f) => f.id), ...elsewhere.keys()])
     const owner = knownOwner(values.owner ?? caller().email)
     let next
     try {
@@ -273,7 +333,13 @@ switch (command) {
   case 'owner':
     if (!values.set) fail('owner needs --set <@login|email>.')
     knownOwner(values.set)
-    setDefinition(state, id, { owner: values.set }, { event: 'owner', owner: values.set })
+    setDefinition(
+      state,
+      id,
+      { owner: values.set },
+      { event: 'owner', owner: values.set, ...(values.reason ? { reason: values.reason } : {}) },
+      { leadMay: true },
+    )
     console.log(`✓ ${id} now belongs to ${values.set}`)
     break
   case 'check':

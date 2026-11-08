@@ -20,6 +20,21 @@ Format:
 
 ---
 
+## 2026-11-08: Team-scale rules, from a simulated 7-person team
+
+- Why: a scripted team (bare repo as GitHub, a clone per developer, CI-checked merges)
+  showed a repeated `start` on two branches turning master red, nobody able to reassign a
+  departed member's feature, colliding ids, and CODEOWNERS conflicts that silently drop a
+  reviewer. Now: repeated moves are ignored, over-limit warns, leads (recorded in the
+  ledger like joins, replayed per line; mirrored in `team.json`) hand over with `--reason`, `features add` picks an id free on every pushed branch, and
+  `harness:check` fails on an incomplete CODEOWNERS. `team-sim.test.mjs` replays it.
+  A roster that already had several joins gets its earliest joiner as lead; correct it
+  with `npm run team -- lead @x` (and `--remove`).
+- Rejected: failing master when someone is over the limit — one overlap blocks every PR;
+  a central id counter file — it conflicts exactly like `features.json`; union-merging
+  `PROGRESS.md` — two edits to one line would both survive (per-person files: later);
+  leads read from today's `team.json` — a departed lead's old hand-overs would fail master.
+
 ## 2026-11-08: `/kickoff` + a team roster; owners may be a GitHub `@login`
 
 - Why: a lead has a PRD / demo / feature list and GitHub usernames, not teammates' git

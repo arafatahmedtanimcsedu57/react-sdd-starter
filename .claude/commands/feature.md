@@ -23,9 +23,9 @@ link, open questions, approved or not) and the next command to run. Stop.
 
 1. **Define** — capture intent in `features.md` (behaviour, states, edge cases, open
    questions). For small changes, a one-line note is fine. Once the human confirms the
-   entry, register it: `npm run features -- add --id F0n --title "…" --verify "<unit tests
-&& npx playwright test e2e/<feature>.spec.ts>" --scope <folders>` and add `**ID:** F0n`
-   to the entry. Reuse the id if the change extends an existing feature. If the change touches an API,
+   entry, register it: `npm run features -- add --title "…" --verify "<unit tests
+&& npx playwright test e2e/<feature>.spec.ts>" --scope <folders>` (it prints the next free
+   id) and add `**ID:** <that id>` to the entry. Reuse the id if the change extends an existing feature. If the change touches an API,
    **establish the contract first** (`CLAUDE.md` → API contracts).
 2. **Design check** — read the project canvas (link in `architecture.md` → Design) and look
    for this feature's page.

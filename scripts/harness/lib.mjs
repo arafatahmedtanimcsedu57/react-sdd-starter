@@ -35,6 +35,9 @@ const teamSchema = z.object({
       name: z.string().optional(),
     }),
   ),
+  // A readable copy of who may hand over anyone's unfinished feature. The ledger is the
+  // record (`npm run team -- lead`); when present, this must match it.
+  leads: z.array(z.string().regex(LOGIN, 'leads must be GitHub usernames (no @)')).optional(),
 })
 
 export function parseTeam(data) {
@@ -52,7 +55,51 @@ export function parseTeam(data) {
       seen.add(v)
     }
   }
+  const logins = new Set(result.data.members.map((m) => m.github.toLowerCase()))
+  const stranger = result.data.leads?.find((l) => !logins.has(l.toLowerCase()))
+  if (stranger) throw new Error(`team.json: lead @${stranger} is not a member`)
   return result.data
+}
+
+/**
+ * Leads, replayed from the ledger like joins: the first member to join founds the team as
+ * its lead; `{ event: 'lead', github, remove? }` lines (written by a lead) add or remove one.
+ * `step(e)` applies one line and returns a problem, or null.
+ */
+export function leadReplay() {
+  const leads = new Set()
+  let founded = false
+  return {
+    leads,
+    has: (login) => Boolean(login) && leads.has(login.toLowerCase()),
+    step(e, byLogin) {
+      if (e.event === 'join' && !founded && e.github) {
+        founded = true
+        leads.add(e.github.toLowerCase())
+      }
+      if (e.event !== 'lead' || !e.github) return null
+      if (!leads.has(byLogin?.toLowerCase())) return `lead changed by ${e.by}, who is not a lead`
+      if (e.remove) leads.delete(e.github.toLowerCase())
+      else leads.add(e.github.toLowerCase())
+      return leads.size ? null : 'removes the last lead'
+    },
+  }
+}
+
+/** The leads now (lowercase logins), from the ledger. */
+export function ledgerLeads(ledger) {
+  const replay = leadReplay()
+  const joined = {}
+  for (const e of ledger) {
+    if (e.event === 'join' && e.by && e.github) joined[e.by.toLowerCase()] = e.github
+    replay.step(e, joined[e.by?.toLowerCase()])
+  }
+  return [...replay.leads]
+}
+
+export const isLead = (leads, me) => {
+  const github = asMe(me).github?.toLowerCase()
+  return Boolean(github) && leads.some((l) => l.toLowerCase() === github)
 }
 
 /** The GitHub login of the member who joined with `email`, if any. */
@@ -71,6 +118,22 @@ export function isOwner(featureOwner, me) {
 const label = (me) => {
   const { email, github } = asMe(me)
   return github ? `@${github}` : email || 'unknown'
+}
+
+/** Why `me` may not touch a feature owned by `owner` — with the right next step. */
+export function notOwnerMessage(id, owner, me, what = 'moves it') {
+  const { email, github } = asMe(me)
+  if (owner.startsWith('@') && !github) {
+    return (
+      `${id} belongs to ${owner}, and ${email || 'your git email'} isn't linked to a GitHub ` +
+      'login on this branch. If that is you: run `npm run team -- join` here, or branch from ' +
+      'your join branch until its PR merges.'
+    )
+  }
+  return (
+    `${id} belongs to ${owner}; you are ${label(me)}. Only its owner ${what} — hand it over ` +
+    `first (npm run features -- owner ${id} --set <@login|email>; a lead can, with --reason).`
+  )
 }
 
 // Definitions only. State, attempts and evidence live in features.ledger.jsonl, which merges
@@ -102,6 +165,25 @@ export function parseFeatureList(data) {
     seen.add(id)
   }
   return result.data
+}
+
+/** The next feature id after every id in `ids` (local and on other branches). */
+export function nextId(ids) {
+  const max = Math.max(0, ...[...ids].map((id) => Number(/^F(\d+)$/.exec(id)?.[1] ?? 0)))
+  return `F${String(max + 1).padStart(2, '0')}`
+}
+
+/** Owners with more than `limits.activePerOwner` active — two branches each started one. */
+export function overLimit(features, limits, team) {
+  const key = (owner) => {
+    const login = owner.startsWith('@') ? owner.slice(1) : loginFor(team ?? { members: [] }, owner)
+    return (login ? `@${login}` : owner).toLowerCase()
+  }
+  const active = {}
+  for (const f of features.filter((x) => x.state === 'active')) {
+    ;(active[key(f.owner)] ??= { owner: f.owner, ids: [] }).ids.push(f.id)
+  }
+  return Object.values(active).filter((a) => a.ids.length > limits.activePerOwner)
 }
 
 export function addFeature(list, input) {
@@ -147,12 +229,7 @@ const ALLOWED = {
 export function transition(features, id, to, { me, limits, reason, evidence } = {}) {
   const current = features.find((f) => f.id === id)
   if (!current) throw new Error(`${id} is not in features.json.`)
-  if (!isOwner(current.owner, me)) {
-    throw new Error(
-      `${id} belongs to ${current.owner}; you are ${label(me)}. Only its owner moves it — ` +
-        `hand it over first (npm run features -- owner ${id} --set <@login|email>, ask a human).`,
-    )
-  }
+  if (!isOwner(current.owner, me)) throw new Error(notOwnerMessage(id, current.owner, me))
   if (!ALLOWED[current.state]?.includes(to)) {
     throw new Error(`${id}: ${current.state} → ${to} is not allowed.`)
   }
@@ -202,6 +279,9 @@ const sameScope = (a, b) => [...a].sort().join('\n') === [...b].sort().join('\n'
  */
 export function findLedgerAnomalies(ledger) {
   const problems = []
+  // Leads in force when each line was written, so removing a lead later never turns their
+  // old hand-overs red, and making someone a lead never blesses their old lines.
+  const leads = leadReplay()
   const state = {}
   const owner = {}
   // email → @login, from the `join` lines seen so far: a line is checked against the links
@@ -212,10 +292,10 @@ export function findLedgerAnomalies(ledger) {
     const where = `ledger line ${i + 1} (${e.id ?? e.event})`
     if (e.by) sawBy = true
     else if (sawBy) problems.push(`${where} has no "by" — written by hand?`)
-    if (e.event === 'join') {
-      if (e.by && e.github) joined[e.by.toLowerCase()] = e.github
-      return
-    }
+    if (e.event === 'join' && e.by && e.github) joined[e.by.toLowerCase()] = e.github
+    const leadProblem = leads.step(e, joined[e.by?.toLowerCase()])
+    if (leadProblem) problems.push(`${where}: ${leadProblem}`)
+    if (e.event === 'join' || e.event === 'lead') return
     const checked = Boolean(e.by)
     const byOwner = () => isOwner(owner[e.id], { email: e.by, github: joined[e.by.toLowerCase()] })
     const notOwner = (what) =>
@@ -224,7 +304,13 @@ export function findLedgerAnomalies(ledger) {
         : []
 
     if (e.event === 'owner') {
-      problems.push(...notOwner('owner changed'))
+      const asLead = checked && owner[e.id] && !byOwner()
+      const byLead = e.reason && leads.has(joined[e.by?.toLowerCase()])
+      if (!byLead) problems.push(...notOwner('owner changed'))
+      // As the CLI: a lead may not take over a shipped feature (its owner may re-label it).
+      if (asLead && byLead && state[e.id] === 'passing') {
+        problems.push(`${where}: a lead hands over a passing feature`)
+      }
       owner[e.id] = e.owner
       return
     }
@@ -233,6 +319,15 @@ export function findLedgerAnomalies(ledger) {
       return
     }
     const from = state[e.id] ?? null
+    // The same move made on two branches (e.g. `start` in two worktrees), union-merged: it
+    // repeats the state the feature is already in, so it changes nothing.
+    if (from !== null && e.to === from && ALLOWED[e.from]?.includes(e.to)) {
+      if (checked && e.to === 'passing' && !e.evidence) {
+        problems.push(`${where}: passing without evidence from a verify run`)
+      }
+      problems.push(...notOwner('moved'))
+      return
+    }
     if ((e.from ?? null) !== from) {
       problems.push(
         `${where}: moves from "${e.from}" but the feature was "${from}" (forked or hand-written history)`,
@@ -270,6 +365,19 @@ function rosterDrift(team, ledger) {
     )
 }
 
+/** team.json `leads` (when present) that differ from the ledger's: a hand edit. */
+function leadDrift(team, ledger) {
+  if (!team?.leads) return []
+  const want = ledgerLeads(ledger).sort().join(', ')
+  const have = team.leads
+    .map((l) => l.toLowerCase())
+    .sort()
+    .join(', ')
+  return want === have
+    ? []
+    : [`team.json leads are [${have}] but the ledger says [${want}]: use npm run team -- lead`]
+}
+
 /** Definitions in features.json that the ledger doesn't back up (edited by hand). */
 export function findLedgerDrift(list, ledger, team) {
   const defs = replayDefinitions(ledger)
@@ -292,6 +400,7 @@ export function findLedgerDrift(list, ledger, team) {
       return problems
     })
     .concat(findLedgerAnomalies(ledger))
+    .concat(leadDrift(team, ledger))
     .concat(rosterDrift(team, ledger))
 }
 
@@ -784,6 +893,20 @@ export function checkTeamSetup({ branch, protection, collaborators, codeowners }
       fix: `add ${strangers.join(', ')} in Settings → Collaborators with write access`,
     },
   ]
+}
+
+/**
+ * Owned CODEOWNERS lines that miss a roster member (e.g. a bad conflict resolution). A line
+ * owned by a GitHub team (`@org/team`) or an email is the team's own choice: skipped.
+ */
+export function codeownersMissing(text, logins) {
+  return parseCodeowners(text)
+    .filter((r) => r.owners.length && r.owners.every((o) => /^@[^/@]+$/.test(o)))
+    .flatMap((r) => {
+      const listed = new Set(r.owners.map((o) => o.toLowerCase()))
+      const missing = logins.filter((l) => !listed.has(`@${l}`.toLowerCase()))
+      return missing.length ? [`${r.pattern} misses ${missing.map((l) => `@${l}`).join(' ')}`] : []
+    })
 }
 
 /**
